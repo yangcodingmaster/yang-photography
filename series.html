@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>系列 — Yang Photography</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'site-bg':      '#fafaf7',
+            'site-surface': '#f2f2ef',
+            'site-border':  '#e0e0dc',
+            'site-text':    '#111111',
+            'site-muted':   '#8a8a85',
+            'site-accent':  '#111111',
+          },
+          fontFamily: {
+            'display': ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'body':    ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'zh':      ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet" />
+
+  <!-- Lightbox 动画 + 照片区拖拽鼠标样式 -->
+  <style>
+    #lightbox {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    #lightbox.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #lightbox-img {
+      transform: scale(0.97);
+      transition: transform 0.25s ease;
+    }
+    #lightbox.active #lightbox-img {
+      transform: scale(1);
+    }
+    /* 照片区：抓手光标，提示可拖拽 */
+    #lightbox-photo-area {
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #lightbox-photo-area.grabbing {
+      cursor: grabbing;
+    }
+  </style>
+</head>
+
+<body class="bg-site-bg text-site-text font-body antialiased">
+
+  <!-- 导航栏：所有页面统一使用 -->
+  <nav class="fixed top-0 w-full z-50 bg-site-bg">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="index.html" class="font-display text-xl tracking-wide text-site-text hover:text-site-muted transition-colors">
+        Yang
+      </a>
+      <ul class="flex gap-8 text-sm text-site-muted">
+        <li><a href="gallery.html" class="text-site-text">Gallery</a></li>
+        <li><a href="journal.html" class="hover:text-site-text transition-colors">Journal</a></li>
+        <li><a href="about.html"   class="hover:text-site-text transition-colors">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="h-16"></div>
+
+
+  <!-- 系列标题区（内容由 JS 填入） -->
+  <header class="max-w-6xl mx-auto px-6 pt-16 pb-12 border-b border-site-border">
+
+    <!-- 返回作品集的链接 -->
+    <a href="gallery.html" class="inline-block text-xs text-site-muted hover:text-site-text transition-colors tracking-widest uppercase mb-8">
+      ← 作品集 / Gallery
+    </a>
+
+    <!-- 系列标题（由 JS 填入） -->
+    <h1 id="series-title">
+      <span id="title-zh" class="block font-zh text-4xl font-light"></span>
+      <span id="title-en" class="block font-display text-site-muted text-xl mt-2"></span>
+    </h1>
+
+    <!-- 年份、地点、照片数量 -->
+    <p id="series-meta" class="mt-4 text-sm text-site-muted"></p>
+
+    <!-- 系列描述文字：中英文之间留出明显呼吸空间，英文略小略浅形成层级 -->
+    <div class="mt-6 max-w-xl">
+      <p id="desc-zh" class="font-zh text-sm leading-loose"></p>
+      <p id="desc-en" class="font-display text-site-muted text-[13px] leading-loose mt-5"></p>
+    </div>
+
+  </header>
+
+
+  <!-- 照片网格区 -->
+  <main class="max-w-6xl mx-auto px-6 py-12">
+    <!-- 瀑布流：CSS columns 自动堆叠，每张照片保持原始比例 -->
+    <div id="photo-grid" class="columns-1 md:columns-2 lg:columns-3 gap-x-4">
+      <!-- 由 JS 渲染 -->
+    </div>
+  </main>
+
+
+  <!-- Lightbox：图文整体居中，四周留白 -->
+  <div id="lightbox" class="fixed inset-0 z-50 bg-site-bg flex items-center justify-center">
+
+    <!-- 左上角：计数 + 常驻章节指示器（仅在照片/组图视图显示） -->
+    <div class="absolute top-6 left-8 text-xs text-site-muted tracking-widest flex items-baseline gap-3">
+      <span id="lightbox-counter"></span>
+      <span id="lightbox-chapter" class="opacity-70"></span>
+    </div>
+
+    <!-- 出口（右上角）：像展览馆出口的指示牌 -->
+    <!-- 首字母大写，→ 前缀让"这是出口"的意图更明确 -->
+    <button onclick="closeLightbox()"
+      class="absolute top-6 right-8 text-xs text-site-muted hover:text-site-text transition-colors tracking-widest">
+      → Way out
+    </button>
+
+    <!-- ① 普通照片视图 -->
+    <div id="view-photo" class="flex flex-col md:flex-row items-center gap-8 md:gap-14 max-w-5xl w-full px-8 md:px-16">
+
+      <!-- 照片区：可拖拽 / 滑动切换 -->
+      <div id="lightbox-photo-area" class="flex-1 flex items-center justify-center min-w-0 w-full">
+        <img id="lightbox-img" src="" alt=""
+          class="max-h-[55vh] md:max-h-[80vh] max-w-full object-contain"
+          draggable="false" />
+      </div>
+
+      <!-- 文字面板 -->
+      <div class="w-full md:w-52 shrink-0 flex flex-col gap-2">
+        <h2 id="lightbox-caption"  class="font-zh text-xl font-light text-site-text"></h2>
+        <p  id="lightbox-date"     class="text-xs text-site-muted"></p>
+        <p  id="lightbox-location" class="text-xs text-site-muted"></p>
+        <p  id="lightbox-desc"     class="text-sm text-site-muted font-body leading-loose mt-1"></p>
+        <p  id="lightbox-meta"     class="text-xs text-site-muted mt-2"></p>
+        <p class="text-xs text-site-muted opacity-30 mt-6">← → 键 &nbsp;·&nbsp; 拖拽 / 滑动</p>
+      </div>
+
+    </div>
+
+    <!-- ② 组图视图：2-5 张照片纵向堆叠，右侧共享文字面板 -->
+    <div id="view-group" class="flex flex-col md:flex-row items-start gap-8 md:gap-14 max-w-5xl w-full px-8 md:px-16" style="display:none">
+
+      <!-- 照片纵向堆叠：可纵向滚动，水平滑动仍可翻页 -->
+      <div id="group-stack" class="flex-1 flex flex-col gap-3 overflow-y-auto min-w-0 w-full" style="max-height:80vh">
+        <!-- 由 JS 填入 -->
+      </div>
+
+      <!-- 文字面板（与照片视图结构一致）-->
+      <div class="w-full md:w-52 shrink-0 flex flex-col gap-2">
+        <h2 id="group-caption"  class="font-zh text-xl font-light text-site-text"></h2>
+        <p  id="group-date"     class="text-xs text-site-muted"></p>
+        <p  id="group-location" class="text-xs text-site-muted"></p>
+        <p  id="group-desc"     class="text-sm text-site-muted font-body leading-loose mt-1"></p>
+        <p  id="group-meta"     class="text-xs text-site-muted mt-2"></p>
+        <p class="text-xs text-site-muted opacity-30 mt-6">← → 键 &nbsp;·&nbsp; 拖拽 / 滑动</p>
+      </div>
+
+    </div>
+
+    <!-- ③ 章节过渡卡（分章系列专用）-->
+    <div id="view-chapter" class="flex-col items-center justify-center text-center px-12 max-w-lg" style="display:none">
+      <p  id="chapter-index"    class="text-xs text-site-muted tracking-widest uppercase mb-10"></p>
+      <h2 id="chapter-title-zh" class="font-zh text-5xl font-light mb-3"></h2>
+      <p  id="chapter-title-en" class="font-display text-site-muted text-xl mb-10"></p>
+      <p  id="chapter-desc-zh"  class="font-zh text-sm text-site-muted leading-loose"></p>
+      <p  id="chapter-desc-en"  class="font-display text-xs text-site-muted mt-5 leading-loose"></p>
+      <p class="mt-16 text-xs text-site-muted opacity-30">→ 滑动 / 按键继续</p>
+    </div>
+
+    <!-- ④ 结束卡：所有照片看完后出现，再按 → 就关闭 Lightbox -->
+    <div id="view-end" class="flex-col items-center justify-center text-center px-12 max-w-lg" style="display:none">
+      <h2 class="font-zh text-4xl font-light mb-4">游览到此结束</h2>
+      <p class="font-display text-site-muted text-lg">Your visit is over</p>
+      <p class="mt-16 text-xs text-site-muted opacity-30 tracking-widest">→ Way out</p>
+    </div>
+
+  </div>
+
+
+  <!-- 先加载数据，再执行页面逻辑 -->
+  <script src="data.js"></script>
+  <script>
+
+    // ── 读取系列 ID ───────────────────────────────────────────────
+    var params   = new URLSearchParams(window.location.search);
+    var seriesId = params.get('id');
+    var series   = allSeries.find(function(s) { return s.id === seriesId; });
+    if (!series) { window.location.href = 'gallery.html'; }
+
+    var isSectioned = series.type === 'sectioned';
+    var chapters    = isSectioned ? (allChapters[seriesId] || []) : [];
+
+    // ── 构建统一渲染列表 renderItems ─────────────────────────────
+    // kind: 'photo'   — 单张照片
+    // kind: 'group'   — 组图（2-5张纵向堆叠）
+    // kind: 'chapter' — 章节过渡卡（分章系列专用）
+    var renderItems = [];
+
+    // 将 data.js 里的一条照片记录转为 renderItem
+    // chapter 是该照片所属章节对象（普通系列传 null）
+    function entryToItem(entry, chapter) {
+      var chZh = chapter ? chapter.titleZh : '';
+      var chEn = chapter ? chapter.titleEn : '';
+      if (entry.group) {
+        return { kind: 'group', photos: entry.group, caption: entry.caption,
+                 date: entry.date, location: entry.location,
+                 desc: entry.desc, meta: entry.meta,
+                 chapterZh: chZh, chapterEn: chEn };
+      }
+      return { kind: 'photo', photo: entry, chapterZh: chZh, chapterEn: chEn };
+    }
+
+    // 记录每个章节的章节卡在 renderItems 中的索引（用于点击章节标题跳转）
+    var chapterCardIndices = [];
+
+    if (isSectioned) {
+      // 新结构：章节卡放在每个章节的"开头"而非"之间"，这样：
+      //   1) 每个章节都有自己的卡片（包括第一章）
+      //   2) 点击瀑布流里的章节标题可以跳到对应章节卡
+      //   3) 顺序浏览仍然在每章开始前看到该章简介
+      chapters.forEach(function(chapter, chIdx) {
+        chapterCardIndices[chIdx] = renderItems.length;
+        renderItems.push({
+          kind: 'chapter',
+          titleZh: chapter.titleZh, titleEn: chapter.titleEn,
+          descZh: chapter.descZh,  descEn: chapter.descEn,
+          chapterIndex: chIdx + 1, chapterTotal: chapters.length,
+        });
+        chapter.photos.forEach(function(entry) {
+          renderItems.push(entryToItem(entry, chapter));
+        });
+      });
+    } else {
+      // 非分章系列 = "只有一章的分章系列"，按 data.js 数组顺序展示，不随机
+      // 这样和分章系列的章节内顺序保持一致：作者填什么顺序就是什么顺序
+      (allPhotos[seriesId] || []).forEach(function(entry) {
+        renderItems.push(entryToItem(entry));
+      });
+    }
+
+    // ── 在 renderItems 末尾追加一张"游览结束"卡 ────────────────
+    // 这样它就是 renderItems 的最后一项，索引最大；和章节卡一样
+    // 通过 currentIndex 自动进入展示，无需特殊状态变量
+    renderItems.push({ kind: 'end' });
+
+    // ── 填入系列标题区 ────────────────────────────────────────────
+    // 注意：itemCount 用于显示"N 张/组"，要排除章节卡和结束卡
+    var itemCount = renderItems.filter(function(x) {
+      return x.kind !== 'chapter' && x.kind !== 'end';
+    }).length;
+    document.title = series.titleZh + ' — Yang Photography';
+    document.getElementById('title-zh').textContent = series.titleZh;
+    document.getElementById('title-en').textContent = series.titleEn;
+    document.getElementById('desc-zh').textContent  = series.descZh;
+    document.getElementById('desc-en').textContent  = series.descEn;
+    document.getElementById('series-meta').textContent = isSectioned
+      ? series.year + ' · ' + series.location + ' · ' + chapters.length + ' 个章节 · ' + itemCount + ' 组'
+      : series.year + ' · ' + series.location + ' · ' + itemCount + ' 张';
+
+    // ── 工具：渲染单个网格项（单张 or 组图首张 + 角标）──────────
+    function makeGridItem(item, index) {
+      var el = document.createElement('div');
+      el.className = 'break-inside-avoid mb-4 group cursor-pointer';
+      el.onclick = (function(i) { return function() { openLightbox(i); }; })(index);
+
+      var isGroup  = item.kind === 'group';
+      var src      = isGroup ? item.photos[0].src     : item.photo.src;
+      var alt      = isGroup ? item.photos[0].alt     : item.photo.alt;
+      var caption  = isGroup ? item.caption           : item.photo.caption;
+      var badge    = isGroup
+        ? '<span class="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-1.5 py-0.5">×' + item.photos.length + '</span>'
+        : '';
+
+      el.innerHTML =
+        '<div class="overflow-hidden relative">' +
+          '<img src="' + src + '" alt="' + alt + '" loading="lazy" ' +
+               'class="w-full transition-transform duration-700 group-hover:scale-[1.02]" />' +
+          badge +
+        '</div>' +
+        (caption ? '<p class="mt-2 text-xs text-site-muted">' + caption + '</p>' : '');
+      return el;
+    }
+
+    // ── 渲染网格 ──────────────────────────────────────────────────
+    var mainEl = document.querySelector('main');
+
+    if (isSectioned) {
+      mainEl.innerHTML = '';
+      chapters.forEach(function(chapter, chIdx) {
+        // 这章的章节卡在 renderItems 里的位置（点击章节标题就跳到这里）
+        var cardIdx = chapterCardIndices[chIdx];
+
+        var section = document.createElement('div');
+        section.className = 'mb-14';
+
+        // ── 章节标题：可点击，点击后在 Lightbox 打开对应章节卡 ──
+        // 视觉提示：cursor-pointer + hover 时整体淡一点
+        var header = document.createElement('div');
+        header.className = 'flex items-baseline gap-4 mb-6 pb-3 border-b border-site-border cursor-pointer hover:opacity-60 transition-opacity';
+        header.onclick = (function(idx) { return function() { openLightbox(idx); }; })(cardIdx);
+        header.innerHTML =
+          '<h3 class="font-zh text-xl font-light">' + chapter.titleZh + '</h3>' +
+          '<span class="font-display text-site-muted text-sm">' + chapter.titleEn + '</span>';
+        section.appendChild(header);
+
+        // ── 章节内的照片网格 ──
+        // 照片紧跟在章节卡之后，所以索引是 cardIdx + 1, cardIdx + 2, ...
+        var chGrid = document.createElement('div');
+        chGrid.className = 'columns-1 md:columns-2 lg:columns-3 gap-x-4';
+        chapter.photos.forEach(function(_, photoIdxInCh) {
+          var idx = cardIdx + 1 + photoIdxInCh;
+          chGrid.appendChild(makeGridItem(renderItems[idx], idx));
+        });
+        section.appendChild(chGrid);
+        mainEl.appendChild(section);
+      });
+    } else {
+      // 非分章系列：扁平渲染。需要跳过 end 卡（它没有 photo 字段，
+      // 直接 makeGridItem 会抛错并中断后面所有 JS 包括键盘监听器）
+      var grid = document.getElementById('photo-grid');
+      renderItems.forEach(function(item, index) {
+        if (item.kind === 'photo' || item.kind === 'group') {
+          grid.appendChild(makeGridItem(item, index));
+        }
+      });
+    }
+
+    // ── Lightbox 逻辑 ─────────────────────────────────────────────
+    var currentIndex = 0;
+
+    function openLightbox(index) {
+      currentIndex = index;
+      updateLightbox();
+      document.getElementById('lightbox').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+    // 翻页：不再循环。
+    //   - 走到末尾的结束卡之后，再按 → 就关闭 Lightbox（走出展厅）
+    //   - 已经在第一张往左 ← 就停住（开头不需要仪式感）
+    function changePhoto(direction) {
+      var next = currentIndex + direction;
+      if (next >= renderItems.length) { closeLightbox(); return; }
+      if (next < 0) return;     // 第一张往左不动
+      currentIndex = next;
+      updateLightbox();
+    }
+
+    // 计数：照片 + 组图各算 1，跳过章节卡和结束卡
+    function getCounter() {
+      var total = 0, current = 0;
+      for (var k = 0; k < renderItems.length; k++) {
+        var kind = renderItems[k].kind;
+        if (kind !== 'chapter' && kind !== 'end') {
+          total++;
+          if (k <= currentIndex) current++;
+        }
+      }
+      return current + ' / ' + total;
+    }
+
+    function updateLightbox() {
+      var item        = renderItems[currentIndex];
+      var viewPhoto   = document.getElementById('view-photo');
+      var viewGroup   = document.getElementById('view-group');
+      var viewChapter = document.getElementById('view-chapter');
+      var viewEnd     = document.getElementById('view-end');
+      viewPhoto.style.display   = 'none';
+      viewGroup.style.display   = 'none';
+      viewChapter.style.display = 'none';
+      viewEnd.style.display     = 'none';
+
+      // 取出常用 DOM 引用
+      var counterEl = document.getElementById('lightbox-counter');
+      var chapterEl = document.getElementById('lightbox-chapter');
+
+      if (item.kind === 'end') {
+        // 结束卡：清空计数和章节指示器，显示结束视图
+        viewEnd.style.display = 'flex';
+        counterEl.textContent = '';
+        chapterEl.textContent = '';
+        return;
+      }
+
+      if (item.kind === 'photo') {
+        viewPhoto.style.display = '';
+        document.getElementById('lightbox-img').src = item.photo.src;
+        document.getElementById('lightbox-img').alt = item.photo.alt;
+        // 显示计数和当前章节英文名（如果在分章系列里）
+        counterEl.textContent = getCounter();
+        chapterEl.textContent = item.chapterEn ? '· ' + item.chapterEn : '';
+        setField('lightbox-caption',  item.photo.caption);
+        setField('lightbox-date',     item.photo.date);
+        setField('lightbox-location', item.photo.location);
+        setField('lightbox-desc',     item.photo.desc);
+        setField('lightbox-meta',     item.photo.meta);
+
+      } else if (item.kind === 'group') {
+        viewGroup.style.display = '';
+        counterEl.textContent = getCounter();
+        chapterEl.textContent = item.chapterEn ? '· ' + item.chapterEn : '';
+        // 纵向堆叠所有组图
+        var stack = document.getElementById('group-stack');
+        stack.innerHTML = '';
+        item.photos.forEach(function(photo) {
+          var img = document.createElement('img');
+          img.src = photo.src; img.alt = photo.alt || '';
+          img.className = 'w-full'; img.setAttribute('loading', 'lazy');
+          stack.appendChild(img);
+        });
+        setField('group-caption',  item.caption);
+        setField('group-date',     item.date);
+        setField('group-location', item.location);
+        setField('group-desc',     item.desc);
+        setField('group-meta',     item.meta);
+
+      } else {
+        // 章节卡视图：章节信息已在主视图中展示，清空左上角指示器
+        viewChapter.style.display = 'flex';
+        counterEl.textContent = '';
+        chapterEl.textContent = '';
+        document.getElementById('chapter-index').textContent      =
+          '第 ' + item.chapterIndex + ' 章 · 共 ' + item.chapterTotal + ' 章';
+        document.getElementById('chapter-title-zh').textContent   = item.titleZh;
+        document.getElementById('chapter-title-en').textContent   = item.titleEn;
+        setField('chapter-desc-zh', item.descZh);
+        setField('chapter-desc-en', item.descEn);
+      }
+    }
+
+    function setField(id, text) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = text || ''; el.style.display = text ? '' : 'none';
+    }
+
+    // 键盘
+    document.addEventListener('keydown', function(e) {
+      if (!document.getElementById('lightbox').classList.contains('active')) return;
+      if (e.key === 'ArrowLeft')  changePhoto(-1);
+      if (e.key === 'ArrowRight') changePhoto(1);
+      if (e.key === 'Escape')     closeLightbox();
+    });
+
+    // ── 拖拽 / 滑动 ───────────────────────────────────────────────
+    var photoArea   = document.getElementById('lightbox-photo-area');
+    var groupStack  = document.getElementById('group-stack');
+    var chapterView = document.getElementById('view-chapter');
+    var swipeStartX = 0, swipeStartY = 0, isDragging = false;
+    var SWIPE_THRESHOLD = 50;
+
+    // 水平手势优先判断（避免纵向滚动时误触翻页）
+    function isHSwipe(dx, dy) {
+      return Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_THRESHOLD;
+    }
+
+    // 照片区：鼠标
+    photoArea.addEventListener('mousedown', function(e) {
+      swipeStartX = e.clientX; isDragging = true; photoArea.classList.add('grabbing');
+    });
+    document.addEventListener('mouseup', function(e) {
+      if (!isDragging) return;
+      isDragging = false; photoArea.classList.remove('grabbing');
+      var dx = e.clientX - swipeStartX;
+      if (Math.abs(dx) > SWIPE_THRESHOLD) changePhoto(dx < 0 ? 1 : -1);
+    });
+    // 照片区：触控
+    photoArea.addEventListener('touchstart', function(e) {
+      swipeStartX = e.touches[0].clientX; swipeStartY = e.touches[0].clientY;
+    }, { passive: true });
+    photoArea.addEventListener('touchend', function(e) {
+      var dx = e.changedTouches[0].clientX - swipeStartX;
+      var dy = e.changedTouches[0].clientY - swipeStartY;
+      if (isHSwipe(dx, dy)) changePhoto(dx < 0 ? 1 : -1);
+    });
+
+    // 组图区：纵向滚动优先，水平才翻页
+    groupStack.addEventListener('mousedown', function(e) { swipeStartX = e.clientX; isDragging = true; });
+    groupStack.addEventListener('touchstart', function(e) {
+      swipeStartX = e.touches[0].clientX; swipeStartY = e.touches[0].clientY;
+    }, { passive: true });
+    groupStack.addEventListener('touchend', function(e) {
+      var dx = e.changedTouches[0].clientX - swipeStartX;
+      var dy = e.changedTouches[0].clientY - swipeStartY;
+      if (isHSwipe(dx, dy)) changePhoto(dx < 0 ? 1 : -1);
+    });
+
+    // 章节过渡卡
+    chapterView.addEventListener('mousedown', function(e) { swipeStartX = e.clientX; isDragging = true; });
+    chapterView.addEventListener('touchstart', function(e) {
+      swipeStartX = e.touches[0].clientX; swipeStartY = e.touches[0].clientY;
+    }, { passive: true });
+    chapterView.addEventListener('touchend', function(e) {
+      var dx = e.changedTouches[0].clientX - swipeStartX;
+      var dy = e.changedTouches[0].clientY - swipeStartY;
+      if (isHSwipe(dx, dy)) changePhoto(dx < 0 ? 1 : -1);
+    });
+
+    // 结束卡：和章节卡一样的滑动行为（往左滑 / → 关闭，往右滑 / ← 回到最后一张）
+    var endView = document.getElementById('view-end');
+    endView.addEventListener('mousedown', function(e) { swipeStartX = e.clientX; isDragging = true; });
+    endView.addEventListener('touchstart', function(e) {
+      swipeStartX = e.touches[0].clientX; swipeStartY = e.touches[0].clientY;
+    }, { passive: true });
+    endView.addEventListener('touchend', function(e) {
+      var dx = e.changedTouches[0].clientX - swipeStartX;
+      var dy = e.changedTouches[0].clientY - swipeStartY;
+      if (isHSwipe(dx, dy)) changePhoto(dx < 0 ? 1 : -1);
+    });
+
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>关于 / About — Yang Photography</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- 设计系统（与其他页面保持一致） -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'site-bg':      '#fafaf7',
+            'site-surface': '#f2f2ef',
+            'site-border':  '#e0e0dc',
+            'site-text':    '#111111',
+            'site-muted':   '#8a8a85',
+            'site-accent':  '#111111',
+          },
+          fontFamily: {
+            'display': ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'body':    ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'zh':      ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- 字体加载 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet" />
+</head>
+
+<body class="bg-site-bg text-site-text font-body antialiased">
+
+  <!-- 导航栏：所有页面统一使用 -->
+  <nav class="fixed top-0 w-full z-50 bg-site-bg">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="index.html" class="font-display text-xl tracking-wide text-site-text hover:text-site-muted transition-colors">
+        Yang
+      </a>
+      <ul class="flex gap-8 text-sm text-site-muted">
+        <li><a href="gallery.html" class="hover:text-site-text transition-colors">Gallery</a></li>
+        <li><a href="journal.html" class="hover:text-site-text transition-colors">Journal</a></li>
+        <li><a href="about.html"   class="text-site-text">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- 导航栏占位 -->
+  <div class="h-16"></div>
+
+
+  <!-- 个人介绍区：单列窄宽布局（约 600px 阅读宽度），居中 -->
+  <!-- 没有照片，没有标签，只有 bio 和 contact 两块 -->
+  <section class="max-w-2xl mx-auto px-6 pt-20 pb-24">
+
+    <!-- 姓名标题 -->
+    <h1 class="mb-10">
+      <span class="block font-zh text-4xl font-light">赵洋</span>
+      <span class="block font-display text-site-muted text-2xl mt-2">Yang Zhao</span>
+    </h1>
+
+    <!-- 中文 bio（占位文字，等你填入真实内容） -->
+    <div class="space-y-4 font-zh text-sm leading-loose text-site-text/90">
+      <p>
+        在北京和伦敦之间成长。UCL 化学系在读，同时用胶片记录所经过的每一座城市。
+      </p>
+      <p>
+        相机是观察的借口，也是与陌生地方建立关系的方式。
+      </p>
+    </div>
+
+    <!-- 英文 bio -->
+    <div class="mt-6 space-y-4 font-display text-sm leading-loose text-site-muted">
+      <p>
+        Growing up between Beijing and London. Studying chemistry at UCL, documenting every city I pass through on film.
+      </p>
+      <p>
+        A camera is an excuse to look, and a way to form a relationship with unfamiliar places.
+      </p>
+    </div>
+
+    <!-- 分割线 -->
+    <div class="border-t border-site-border my-10"></div>
+
+    <!-- 联系方式：未来要加项就在 <ul> 里追加 <li> -->
+    <div>
+      <p class="text-xs text-site-muted tracking-widest uppercase mb-4">联系 / Contact</p>
+      <ul class="space-y-2 text-sm">
+        <li>
+          <a href="mailto:zcqshck@ucl.ac.uk" class="hover:text-site-muted transition-colors">
+            zcqshck@ucl.ac.uk
+          </a>
+        </li>
+        <li>
+          <a href="https://instagram.com/" target="_blank" rel="noopener" class="text-site-muted hover:text-site-text transition-colors">
+            Instagram →
+          </a>
+        </li>
+      </ul>
+    </div>
+
+  </section>
+
+
+</body>
+</html>

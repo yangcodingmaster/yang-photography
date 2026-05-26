@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>作品集 / Gallery — Yang Photography</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'site-bg':      '#fafaf7',
+            'site-surface': '#f2f2ef',
+            'site-border':  '#e0e0dc',
+            'site-text':    '#111111',
+            'site-muted':   '#8a8a85',
+            'site-accent':  '#111111',
+          },
+          fontFamily: {
+            'display': ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'body':    ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'zh':      ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet" />
+</head>
+
+<body class="bg-site-bg text-site-text font-body antialiased">
+
+  <!-- 导航栏：所有页面统一使用 -->
+  <nav class="fixed top-0 w-full z-50 bg-site-bg">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="index.html" class="font-display text-xl tracking-wide text-site-text hover:text-site-muted transition-colors">
+        Yang
+      </a>
+      <ul class="flex gap-8 text-sm text-site-muted">
+        <li><a href="gallery.html" class="text-site-text">Gallery</a></li>
+        <li><a href="journal.html" class="hover:text-site-text transition-colors">Journal</a></li>
+        <li><a href="about.html"   class="hover:text-site-text transition-colors">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="h-16"></div>
+
+
+  <!-- 页面标题区 -->
+  <header class="max-w-6xl mx-auto px-6 pt-16 pb-12 border-b border-site-border">
+    <h1>
+      <span class="block font-zh text-4xl font-light">作品集</span>
+      <span class="block font-display text-site-muted text-xl mt-2">Gallery</span>
+    </h1>
+  </header>
+
+
+  <!-- 系列网格：每个方块是一个照片系列（"文件夹"） -->
+  <main class="max-w-6xl mx-auto px-6 py-12">
+    <div id="series-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- 由下方 JS 根据 data.js 里的 allSeries 渲染 -->
+    </div>
+  </main>
+
+
+  <!-- 先加载数据文件，再执行渲染逻辑 -->
+  <script src="data.js"></script>
+  <script>
+    // 把 allSeries 数组渲染成系列卡片
+    var grid = document.getElementById('series-grid');
+    allSeries.forEach(function(series) {
+
+      // 创建卡片：点击跳转到 series.html?id=系列ID
+      // 注意：没有 hover overlay / scale 等"网页味"动效，卡片本身可点即可
+      var card = document.createElement('a');
+      card.href = 'series.html?id=' + series.id;
+      card.className = 'block';
+
+      // 拼接年份/地点，空字段自动跳过（避免出现 "2025 ·  · " 这种残缺分隔符）
+      var metaParts = [];
+      if (series.year)     metaParts.push(series.year);
+      if (series.location) metaParts.push(series.location);
+      var metaLine = metaParts.join(' &nbsp;·&nbsp; ');
+
+      // 封面图取法：分章系列用 series.cover，普通系列用第一张照片
+      var coverSrc = series.cover
+        ? series.cover
+        : (allPhotos[series.id] && allPhotos[series.id][0] ? allPhotos[series.id][0].src : '');
+
+      card.innerHTML =
+        // 封面图片区域：4:3 容器，纯静态，没有任何悬停效果
+        '<div class="relative aspect-[4/3] overflow-hidden bg-site-surface">' +
+          '<img src="' + coverSrc + '" alt="' + series.titleZh + ' 封面" class="w-full h-full object-cover" />' +
+        '</div>' +
+
+        // 系列信息区：标题（中英）+ 年份地点
+        '<div class="mt-4">' +
+          '<h2 class="font-zh text-lg font-light">' + series.titleZh + '</h2>' +
+          '<p class="font-display text-site-muted text-sm mt-0.5">' + series.titleEn + '</p>' +
+          (metaLine ? '<p class="text-xs text-site-muted mt-2 tracking-wide">' + metaLine + '</p>' : '') +
+        '</div>';
+
+      grid.appendChild(card);
+    });
+  </script>
+
+</body>
+</html>

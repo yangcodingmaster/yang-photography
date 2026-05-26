@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yang — Photography</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'site-bg':      '#fafaf7',
+            'site-surface': '#f2f2ef',
+            'site-border':  '#e0e0dc',
+            'site-text':    '#111111',
+            'site-muted':   '#8a8a85',
+            'site-accent':  '#111111',
+          },
+          fontFamily: {
+            'display': ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'body':    ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'zh':      ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── 明信片式布局 ─────────────────────────────────────────
+       把整张网页当成一张暖白色明信片，照片只占据中央一块区域，
+       四周大量留白。两张 <img> 叠在同一位置做交叉淡入淡出。
+       照片以自身原始比例显示（横/竖随自己），不裁切、不拉伸：
+         - max-height: 70vh    ← 高度上限（垂直留白比例由此决定）
+         - max-width:  78vw    ← 宽度上限（横向留白比例由此决定）
+       两张图绝对定位 + transform 居中，所以无论尺寸如何变化都保持居中。
+    ──────────────────────────────────────────────────────── */
+    .hero-photo {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-height: 70vh;        /* ← 想让照片更大/更小，调这两个值 */
+      max-width:  78vw;
+      width: auto;
+      height: auto;
+      border: 1px solid #111;  /* ← 极细黑色描边，让照片"贴"在纸上 */
+      opacity: 0;
+      transition: opacity 1.2s ease-in-out;   /* ← 淡入淡出时长 */
+    }
+    .hero-photo.is-visible { opacity: 1; }
+  </style>
+</head>
+
+<body class="bg-site-bg text-site-text font-body antialiased overflow-hidden">
+
+  <!-- ── 顶部导航：透明叠在照片之上，浅色磨砂背景保持可读 ── -->
+  <nav class="fixed top-0 w-full z-50 bg-site-bg">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="index.html" class="font-display text-xl tracking-wide text-site-text hover:text-site-muted transition-colors">
+        Yang
+      </a>
+      <ul class="flex gap-8 text-sm text-site-muted">
+        <li><a href="gallery.html" class="hover:text-site-text transition-colors">Gallery</a></li>
+        <li><a href="journal.html" class="hover:text-site-text transition-colors">Journal</a></li>
+        <li><a href="about.html"   class="hover:text-site-text transition-colors">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+
+  <!-- ── 全屏照片轮播：两张图叠放，交叉淡入淡出 ── -->
+  <!-- 占满整个视口（含导航栏后面那一条），导航是半透明的会让顶部边缘也透出照片 -->
+  <main class="fixed inset-0 w-screen h-screen bg-site-bg">
+    <img id="hero-a" class="hero-photo" alt="" />
+    <img id="hero-b" class="hero-photo" alt="" />
+  </main>
+
+
+  <script src="data.js"></script>
+  <script>
+
+    // ── Fisher-Yates 随机打乱 ──────────────────────────────────
+    function shuffle(arr) {
+      var a = arr.slice();
+      for (var i = a.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = a[i]; a[i] = a[j]; a[j] = t;
+      }
+      return a;
+    }
+
+    // ── 从 data.js 收集全部照片（含分章系列、含组图拆开） ─────
+    // 把所有照片摊平成一个 { src, alt } 数组
+    var pool = [];
+
+    function pushPhoto(p) {
+      if (!p) return;
+      if (p.group && p.group.length) {
+        // 组图：把内部每张拆出来当独立图
+        p.group.forEach(function(g) { pool.push({ src: g.src, alt: g.alt || '' }); });
+      } else if (p.src) {
+        pool.push({ src: p.src, alt: p.alt || '' });
+      }
+    }
+
+    // 普通系列：allPhotos[id] 是照片数组
+    Object.keys(allPhotos || {}).forEach(function(id) {
+      (allPhotos[id] || []).forEach(pushPhoto);
+    });
+
+    // 分章系列：allChapters[id] 是章节数组，章节里有 photos
+    Object.keys(allChapters || {}).forEach(function(id) {
+      (allChapters[id] || []).forEach(function(chapter) {
+        (chapter.photos || []).forEach(pushPhoto);
+      });
+    });
+
+
+    // ── 轮播参数（想调时长改这两个数即可） ─────────────────────
+    var HOLD_MS = 4500;   // 每张停留时间
+    var FADE_MS = 1200;   // 淡入淡出时长（须与 CSS .hero-photo 的 transition 一致）
+
+    var photos   = shuffle(pool);
+    var slotA    = document.getElementById('hero-a');
+    var slotB    = document.getElementById('hero-b');
+    var idx      = 0;
+    var showingA = true;
+
+    // 预加载下一张，避免切换时白屏
+    function preload(src) {
+      var img = new Image();
+      img.src = src;
+    }
+
+    // 显示第一张
+    if (photos.length) {
+      slotA.src = photos[0].src;
+      slotA.alt = photos[0].alt;
+      slotA.classList.add('is-visible');
+      if (photos.length > 1) preload(photos[1].src);
+    }
+
+    // 没有照片时直接结束（避免空数组下 setInterval 死循环）
+    if (photos.length > 1) {
+      setInterval(function() {
+        idx = (idx + 1) % photos.length;
+        var next  = photos[idx];
+        var enter = showingA ? slotB : slotA;
+        var leave = showingA ? slotA : slotB;
+
+        // 把下一张放进当前不可见的 slot，然后切换可见状态
+        enter.src = next.src;
+        enter.alt = next.alt;
+        enter.classList.add('is-visible');
+        leave.classList.remove('is-visible');
+
+        showingA = !showingA;
+
+        // 预加载再下一张
+        var nextNext = photos[(idx + 1) % photos.length];
+        if (nextNext) preload(nextNext.src);
+      }, HOLD_MS);
+    }
+
+  </script>
+
+</body>
+</html>

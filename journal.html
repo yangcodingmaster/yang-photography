@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Journal — Yang Photography</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'site-bg':      '#fafaf7',
+            'site-surface': '#f2f2ef',
+            'site-border':  '#e0e0dc',
+            'site-text':    '#111111',
+            'site-muted':   '#8a8a85',
+            'site-accent':  '#111111',
+          },
+          fontFamily: {
+            'display': ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'body':    ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'zh':      ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── 瀑布流：CSS columns，每张图保持原始比例 ── */
+    .masonry {
+      column-count: 3;
+      column-gap: 1rem;
+    }
+    @media (max-width: 768px) { .masonry { column-count: 2; } }
+    @media (max-width: 480px) { .masonry { column-count: 1; } }
+    .masonry-item {
+      break-inside: avoid;
+      margin-bottom: 1rem;
+      display: block;
+      cursor: pointer;
+    }
+
+    /* ── Lightbox：纯图模式，无侧栏文字 ── */
+    #lightbox {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    #lightbox.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #lightbox-img {
+      transform: scale(0.97);
+      transition: transform 0.25s ease;
+    }
+    #lightbox.active #lightbox-img {
+      transform: scale(1);
+    }
+  </style>
+</head>
+
+<body class="bg-site-bg text-site-text font-body antialiased">
+
+  <!-- 导航栏 -->
+  <nav class="fixed top-0 w-full z-50 bg-site-bg">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="index.html" class="font-display text-xl tracking-wide text-site-text hover:text-site-muted transition-colors">
+        Yang
+      </a>
+      <ul class="flex gap-8 text-sm text-site-muted">
+        <li><a href="gallery.html" class="hover:text-site-text transition-colors">Gallery</a></li>
+        <li><a href="journal.html" class="text-site-text">Journal</a></li>
+        <li><a href="about.html"   class="hover:text-site-text transition-colors">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="h-16"></div>
+
+
+  <!-- 页面标题 + 年份导航 -->
+  <header class="max-w-6xl mx-auto px-6 pt-16 pb-8 border-b border-site-border">
+    <h1>
+      <span class="block font-display text-4xl">Journal</span>
+      <span class="block font-zh text-sm text-site-muted mt-2">散片档案</span>
+    </h1>
+
+    <!-- 年份小导航：点击切换年份；当前年份用深色，其余浅色 -->
+    <nav id="year-nav" class="mt-8 flex flex-wrap gap-6 text-sm">
+      <!-- 由 JS 根据 allJournal 的 keys 生成 -->
+    </nav>
+  </header>
+
+
+  <!-- 瀑布流照片区 -->
+  <main class="max-w-6xl mx-auto px-6 py-12">
+    <!-- 空状态提示（当某年没有照片时显示） -->
+    <p id="empty-hint" class="hidden text-sm text-site-muted text-center py-20">
+      这一年还没有照片 / No photos yet
+    </p>
+    <div id="masonry" class="masonry"></div>
+  </main>
+
+
+  <!-- Lightbox：纯图模式 -->
+  <div id="lightbox" class="fixed inset-0 z-[100] bg-site-bg/95 backdrop-blur-md flex items-center justify-center p-6">
+    <!-- 关闭按钮：右上角小叉 -->
+    <button id="lightbox-close"
+            class="absolute top-6 right-6 text-site-muted hover:text-site-text text-2xl leading-none">
+      ×
+    </button>
+
+    <!-- 左右翻页按钮 -->
+    <button id="lightbox-prev"
+            class="absolute left-6 top-1/2 -translate-y-1/2 text-site-muted hover:text-site-text text-3xl leading-none px-3 py-2">
+      ‹
+    </button>
+    <button id="lightbox-next"
+            class="absolute right-6 top-1/2 -translate-y-1/2 text-site-muted hover:text-site-text text-3xl leading-none px-3 py-2">
+      ›
+    </button>
+
+    <!-- 图片本体 -->
+    <img id="lightbox-img" src="" alt=""
+         class="max-w-[88vw] max-h-[85vh] object-contain" />
+  </div>
+
+
+  <script src="data.js"></script>
+  <script>
+    // ── 取出所有年份，按降序（最新在前） ────────────────────────
+    var years = Object.keys(allJournal || {}).sort(function(a, b) {
+      return b.localeCompare(a);
+    });
+
+    // ── 当前显示的年份（默认最新） ────────────────────────────
+    var currentYear = years[0] || null;
+
+    // ── 渲染年份小导航 ────────────────────────────────────────
+    var yearNav = document.getElementById('year-nav');
+    function renderYearNav() {
+      yearNav.innerHTML = '';
+      years.forEach(function(y) {
+        var btn = document.createElement('button');
+        btn.textContent = y;
+        // 当前年份用深色，其余用浅色
+        btn.className = (y === currentYear)
+          ? 'text-site-text font-display tracking-wide'
+          : 'text-site-muted hover:text-site-text transition-colors font-display tracking-wide';
+        btn.addEventListener('click', function() {
+          currentYear = y;
+          renderYearNav();
+          renderMasonry();
+        });
+        yearNav.appendChild(btn);
+      });
+    }
+
+    // ── 渲染当前年份的瀑布流 ──────────────────────────────────
+    var masonry   = document.getElementById('masonry');
+    var emptyHint = document.getElementById('empty-hint');
+
+    // 当前显示的照片列表（用于 Lightbox 翻页）
+    var currentPhotos = [];
+    var currentIndex  = 0;
+
+    function renderMasonry() {
+      masonry.innerHTML = '';
+      currentPhotos = (allJournal[currentYear] || []).slice();
+
+      if (currentPhotos.length === 0) {
+        emptyHint.classList.remove('hidden');
+        return;
+      }
+      emptyHint.classList.add('hidden');
+
+      currentPhotos.forEach(function(photo, i) {
+        var img = document.createElement('img');
+        img.src       = photo.src;
+        img.alt       = photo.alt || '';
+        img.loading   = 'lazy';
+        img.className = 'masonry-item w-full';
+        img.addEventListener('click', function() { openLightbox(i); });
+        masonry.appendChild(img);
+      });
+    }
+
+    // ── Lightbox 控制 ────────────────────────────────────────
+    var lightbox      = document.getElementById('lightbox');
+    var lightboxImg   = document.getElementById('lightbox-img');
+    var btnClose      = document.getElementById('lightbox-close');
+    var btnPrev       = document.getElementById('lightbox-prev');
+    var btnNext       = document.getElementById('lightbox-next');
+
+    function updateLightboxImage() {
+      var p = currentPhotos[currentIndex];
+      if (!p) return;
+      lightboxImg.src = p.src;
+      lightboxImg.alt = p.alt || '';
+    }
+
+    function openLightbox(index) {
+      currentIndex = index;
+      updateLightboxImage();
+      lightbox.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    function showPrev() {
+      currentIndex = (currentIndex - 1 + currentPhotos.length) % currentPhotos.length;
+      updateLightboxImage();
+    }
+
+    function showNext() {
+      currentIndex = (currentIndex + 1) % currentPhotos.length;
+      updateLightboxImage();
+    }
+
+    btnClose.addEventListener('click', closeLightbox);
+    btnPrev.addEventListener('click',  showPrev);
+    btnNext.addEventListener('click',  showNext);
+
+    // 点 Lightbox 背景（不是图片本身）关闭
+    lightbox.addEventListener('click', function(e) {
+      if (e.target === lightbox) closeLightbox();
+    });
+
+    // 键盘：Esc 关闭，← → 翻页
+    document.addEventListener('keydown', function(e) {
+      if (!lightbox.classList.contains('active')) return;
+      if (e.key === 'Escape')     closeLightbox();
+      if (e.key === 'ArrowLeft')  showPrev();
+      if (e.key === 'ArrowRight') showNext();
+    });
+
+    // ── 触摸滑动（手机端翻页） ────────────────────────────────
+    var touchStartX = 0, touchStartY = 0;
+    lightbox.addEventListener('touchstart', function(e) {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    });
+    lightbox.addEventListener('touchend', function(e) {
+      var dx = e.changedTouches[0].clientX - touchStartX;
+      var dy = e.changedTouches[0].clientY - touchStartY;
+      // 横向滑动距离明显大于纵向才认为是翻页（避免误触）
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 0) showPrev(); else showNext();
+      }
+    });
+
+    // ── 初始渲染 ─────────────────────────────────────────────
+    if (currentYear) {
+      renderYearNav();
+      renderMasonry();
+    } else {
+      // 完全没有年份时显示提示
+      emptyHint.classList.remove('hidden');
+    }
+  </script>
+
+</body>
+</html>
