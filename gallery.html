@@ -88,10 +88,8 @@
       if (series.location) metaParts.push(series.location);
       var metaLine = metaParts.join(' &nbsp;·&nbsp; ');
 
-      // 封面图取法：分章系列用 series.cover，普通系列用第一张照片
-      var coverSrc = series.cover
-        ? series.cover
-        : (allPhotos[series.id] && allPhotos[series.id][0] ? allPhotos[series.id][0].src : '');
+      // 封面图取法：所有系列都用 series.cover 显式指定（不再默认取第一张）
+      var coverSrc = series.cover || '';
 
       card.innerHTML =
         // 封面图片区域：4:3 容器，纯静态，没有任何悬停效果
