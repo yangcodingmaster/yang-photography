@@ -28,9 +28,9 @@
 | `index.html` 首页 | ✅ 完成 | 明信片式：暖白纸面 + 居中单张照片轮播（淡入淡出）+ 极简导航 |
 | `gallery.html` 作品集 | ✅ 完成 | 系列网格，封面图 + 标题 + 年份地点 |
 | `series.html` 系列详情 | ✅ 完成 | 瀑布流网格 + 展览级 Lightbox + 分章支持 + 组图支持 |
-| `journal.html` Journal | ✅ 完成 | 散片档案，按年份切换 + 瀑布流 + 纯图 Lightbox（无文字字段） |
+| `archive.html` Archive | ✅ 完成 | 散片档案，按年份切换 + 瀑布流 + 纯图 Lightbox（无文字字段） |
 | `about.html` 关于页 | ✅ 完成 | 结构完成，文案为占位内容待替换 |
-| `data.js` 数据文件 | ✅ 完成 | Gallery（2 个真实系列 + demo）+ Journal（按年份的空数组待填） |
+| `data.js` 数据文件 | ✅ 完成 | Gallery（2 个真实系列 + demo）+ Archive（按年份的空数组待填） |
 | Defocused 系列 | ✅ 完成 | 6 张照片，虚焦主题，2024，北京上海 |
 | Photos of 2025 系列 | ✅ 完成 | 4 个章节共 52 张照片，分章系列 |
 | 填写真实文案 | ⬜ 待完成 | 系列 descZh/descEn、照片 caption/desc、关于页 |
@@ -48,11 +48,11 @@
 ├── index.html              # 首页：明信片式 + 居中单张照片轮播
 ├── gallery.html            # 作品集：系列列表（每格是一个系列/文件夹）
 ├── series.html             # 系列详情页（通用，?id= 参数决定显示哪个系列）
-├── journal.html            # Journal：散片档案，按年份切换 + 瀑布流
+├── archive.html            # Archive：散片档案，按年份切换 + 瀑布流
 ├── about.html              # 关于页：个人介绍 + 联系方式
 │
 ├── data.js                 # ⭐ 唯一的数据文件，所有内容只改这里
-│                           #    包含：allSeries、allPhotos、allChapters、allJournal
+│                           #    包含：allSeries、allPhotos、allChapters、allArchive
 │
 ├── assets/
 │   └── images/
@@ -66,7 +66,7 @@
 │       │       ├── the-summer/                # 17–33.jpeg
 │       │       ├── the-last-fall/             # 34–45.jpeg
 │       │       └── images-that-remain/        # 46–52.jpg
-│       └── journal/                # Journal 散片，按年份归档
+│       └── archive/                # Archive 散片，按年份归档
 │           ├── 2025/
 │           └── 2024/
 │
@@ -86,10 +86,10 @@
 
 ### 首页 `index.html`
 - 明信片式布局：暖白纸面，照片居中显示（max-height: 70vh, max-width: 78vw），不裁切不拉伸，保持自身比例
-- 全 data.js 随机抽取（含 Gallery / Journal 所有照片，含组图拆开）
+- 全 data.js 随机抽取（含 Gallery / Archive 所有照片，含组图拆开）
 - 两张 `<img>` 叠层做交叉淡入淡出，HOLD_MS=4500、FADE_MS=1200（顶部 JS 常量，可调）
 - 照片有 1px 黑色描边
-- 导航融入纸面（无背景无分割线），全英文：Yang · Gallery · Journal · About
+- 导航融入纸面（无背景无分割线），全英文：Yang · Gallery · Archive · About
 
 ### 作品集页 `gallery.html`
 - 从 `data.js` 读取 `allSeries`，渲染成 3 列网格
@@ -117,13 +117,13 @@
 - **组图**（`group` 类型）：Lightbox 内纵向堆叠 2–5 张照片，右侧共享一组文字说明
 - 四种 Lightbox 视图：`view-photo`（单张）、`view-group`（组图）、`view-chapter`（章节卡）、`view-end`（结束卡）
 
-### Journal 页 `journal.html`
+### Archive 页 `archive.html`
 - 散片档案，和 Gallery 平级（不是子集）。所有"不成系列"的照片放这里
-- 数据来自 `data.js` 的 `allJournal`，按年份组织（key 是年份字符串）
+- 数据来自 `data.js` 的 `allArchive`，按年份组织（key 是年份字符串）
 - 页面顶部年份小导航：点击切换年份，一次只显示一年的照片，默认进入最新年份
 - 瀑布流布局（CSS columns，3 列；中屏 2 列；窄屏 1 列），保持照片原始比例
 - 照片有 1px 黑色描边（和首页一致）
-- 点击照片打开**纯图 Lightbox**：没有右侧文字面板，因为 Journal 故意不要任何字段
+- 点击照片打开**纯图 Lightbox**：没有右侧文字面板，因为 Archive 故意不要任何字段
   - Esc / × / 点背景关闭，← → 翻页，支持触摸滑动
 - 年份内顺序 = 数组顺序：把新照片放数组前面 = 最新在最上面
 
@@ -189,23 +189,23 @@ allChapters['photos-of-2025'] = [
 ]
 ```
 
-### allJournal — Journal 散片档案
+### allArchive — Archive 散片档案
 
 ```javascript
-var allJournal = {
+var allArchive = {
   '2025': [
     // 数组顺序就是显示顺序，新照片放前面 = 最新在最上面
-    { src: 'assets/images/Journal/2025/任意命名.jpg', alt: '' },
+    { src: 'assets/images/archive/2025/任意命名.jpg', alt: '' },
   ],
   '2024': [
-    { src: 'assets/images/Journal/2024/xxx.jpg', alt: '' },
+    { src: 'assets/images/archive/2024/xxx.jpg', alt: '' },
   ],
 };
 ```
 
-**关键约束：Journal 只放 src 和 alt，不要任何其他字段。** 这是有意为之 ——
-Journal 故意没有 caption / date / location / desc / meta，因为它的定位就是"只放照片"。
-要给照片配文字，那它应该进 Gallery 而不是 Journal。
+**关键约束：Archive 只放 src 和 alt，不要任何其他字段。** 这是有意为之 ——
+Archive 故意没有 caption / date / location / desc / meta，因为它的定位就是"只放照片"。
+要给照片配文字，那它应该进 Gallery 而不是 Archive。
 
 ### 组图写法（group）
 
@@ -260,13 +260,13 @@ Journal 故意没有 caption / date / location / desc / meta，因为它的定�
 4. 在 `allChapters` 里添加对应的 key 和章节数组
 5. 每个章节包含 `titleZh`、`titleEn`、`descZh`、`descEn`、`photos` 数组
 
-### 如何往 Journal 加照片
+### 如何往 Archive 加照片
 
-1. 把照片放进 `assets/images/journal/YYYY/`（年份是哪年就放哪年的文件夹）
-2. 文件名随意（Journal 不依赖文件名顺序，靠数组顺序决定显示顺序）
-3. 在 `data.js` 的 `allJournal['YYYY']` 数组**最前面**加一行 `{ src: 'assets/images/journal/YYYY/xxx.jpg', alt: '' }`
-4. 想加新一年（如 2026）：在 `allJournal` 里加 `'2026': []`，年份导航会自动出现
-5. 刷新 `journal.html`，最新照片会出现在最上面
+1. 把照片放进 `assets/images/archive/YYYY/`（年份是哪年就放哪年的文件夹）
+2. 文件名随意（Archive 不依赖文件名顺序，靠数组顺序决定显示顺序）
+3. 在 `data.js` 的 `allArchive['YYYY']` 数组**最前面**加一行 `{ src: 'assets/images/archive/YYYY/xxx.jpg', alt: '' }`
+4. 想加新一年（如 2026）：在 `allArchive` 里加 `'2026': []`，年份导航会自动出现
+5. 刷新 `archive.html`，最新照片会出现在最上面
 
 ### 支持的图片格式
 
@@ -372,7 +372,7 @@ tailwind.config = {
 ### 近期待完成
 - [ ] 填写真实文案（Photos of 2025 各章节 descZh/descEn，Defocused 各照片 caption/desc）
 - [ ] 填写关于页自我介绍
-- [ ] 往 `assets/images/Journal/` 下面放散片（按年份归档），同步更新 `data.js` 的 `allJournal`
+- [ ] 往 `assets/images/archive/` 下面放散片（按年份归档），同步更新 `data.js` 的 `allArchive`
 - [ ] 创建 GitHub 仓库并部署到 GitHub Pages
 
 ### 未来可能的方向

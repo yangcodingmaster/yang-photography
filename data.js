@@ -453,11 +453,11 @@ var allChapters = {
 
 
 // ================================================================
-// allJournal — Journal（散片档案）按年份组织
+// allArchive — Journal（散片档案）按年份组织
 // ================================================================
 // Journal 和 Gallery 是平级的两种容器：
 //   - Gallery (allSeries / allPhotos / allChapters) = 我认真策展过的系列
-//   - Journal (allJournal)                          = 不成系列的散片，按年归档
+//   - Journal (allArchive)                          = 不成系列的散片，按年归档
 //
 // 数据结构：key 是年份字符串，value 是该年所有照片的数组
 // 年份内的顺序 = 数组的顺序（把新照片放在数组前面，最新的就在最上面）
@@ -466,33 +466,147 @@ var allChapters = {
 // 不需要 caption / date / location / desc / meta —— Journal 故意只放照片。
 //
 // 添加流程：
-//   1. 把照片放进 assets/images/journal/YYYY/ 文件夹（命名随意，会自动按数组顺序展示）
-//   2. 在 allJournal['YYYY'] 数组开头加一行 { src: '...', alt: '' }
+//   1. 把照片放进 assets/images/archive/YYYY/ 文件夹（命名随意，会自动按数组顺序展示）
+//   2. 在 allArchive['YYYY'] 数组开头加一行 { src: '...', alt: '' }
 // ================================================================
-var allJournal = {
-
-  '2026': [
-    // { src: 'assets/images/journal/2025/xxx.jpg', alt: '' },
-  ],
+var allArchive = {
 
   '2025': [
-    // { src: 'assets/images/journal/2025/xxx.jpg', alt: '' },
+    { src: 'assets/images/archive/2025/1.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/2.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/3.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/4.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/5.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/6.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/7.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/8.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/9.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/10.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/11.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/12.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/13.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/14.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/15.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/16.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/17.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/18.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/19.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/20.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/21.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/22.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/23.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/24.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/25.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/26.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/27.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/28.jpeg', alt: '' },
+    { src: 'assets/images/archive/2025/29.jpeg', alt: '' },
   ],
 
   '2024': [
-    // { src: 'assets/images/journal/2024/xxx.jpg', alt: '' },
+    { src: 'assets/images/archive/2024/1.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/2.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/3.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/4.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/5.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/6.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/7.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/8.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/9.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/10.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/11.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/12.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/13.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/14.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/15.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/16.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/17.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/18.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/19.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/20.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/21.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/22.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/23.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/24.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/25.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/26.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/27.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/28.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/29.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/30.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/31.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/32.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/33.jpeg', alt: '' },
+    { src: 'assets/images/archive/2024/34.jpeg', alt: '' },
   ],
 
   '2023': [
-    // { src: 'assets/images/journal/2025/xxx.jpg', alt: '' },
+    { src: 'assets/images/archive/2023/1.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/2.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/3.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/4.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/5.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/6.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/7.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/8.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/9.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/10.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/11.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/12.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/13.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/14.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/15.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/16.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/17.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/18.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/19.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/20.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/21.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/22.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/23.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/24.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/25.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/26.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/27.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/28.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/29.jpeg', alt: '' },
+    { src: 'assets/images/archive/2023/30.jpeg', alt: '' },
   ],
 
   '2022': [
-    // { src: 'assets/images/journal/2025/xxx.jpg', alt: '' },
+    { src: 'assets/images/archive/2022/1.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/2.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/3.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/4.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/5.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/6.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/7.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/8.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/9.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/10.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/11.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/12.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/13.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/14.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/15.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/16.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/17.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/18.jpeg', alt: '' },
+    { src: 'assets/images/archive/2022/19.jpeg', alt: '' },
   ],
 
   '2021': [
-    // { src: 'assets/images/journal/2025/xxx.jpg', alt: '' },
+    { src: 'assets/images/archive/2021/1.jpeg', alt: '' },
+    { src: 'assets/images/archive/2021/2.jpeg', alt: '' },
+    { src: 'assets/images/archive/2021/3.jpeg', alt: '' },
+    { src: 'assets/images/archive/2021/4.jpeg', alt: '' },
+    { src: 'assets/images/archive/2021/5.jpeg', alt: '' },
+    { src: 'assets/images/archive/2021/6.jpeg', alt: '' },
+    { src: 'assets/images/archive/2021/7.jpeg', alt: '' },
+    { src: 'assets/images/archive/2021/8.jpeg', alt: '' },
+    { src: 'assets/images/archive/2021/9.jpeg', alt: '' },
+    { src: 'assets/images/archive/2021/10.jpeg', alt: '' },
+    { src: 'assets/images/archive/2021/11.jpeg', alt: '' },
   ],
 
 };
