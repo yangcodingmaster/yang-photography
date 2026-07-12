@@ -37,7 +37,7 @@
 | 路径空格清理 | ✅ 完成 | 全部重命名为连字符形式，可直接部署 |
 | GitHub 仓库 + Pages | ✅ 上线 | `yangcodingmaster/yang-photography`，Pages 已 built |
 | `add-gallery-series` skill | ✅ 完成 | 固化"加 Gallery 系列"工作流，见下方"配套 skill" |
-| 交互升级（fluid.js） | ✅ 完成 | Apple 流体交互：1:1 跟手拖拽、橡皮筋边界、方向感换图、按压态、reduced-motion（`interaction-design` 分支开发） |
+| 交互升级（fluid.js） | ✅ 完成 | Apple 流体交互：1:1 跟手拖拽、橡皮筋边界、方向感换图、按压态、滚动浮现、reduced-motion（`interaction-design` 分支开发） |
 | 填写真实文案 | ⬜ 进行中 | 各系列 descZh/descEn、照片 caption/desc、关于页（作者逐张手填） |
 
 ### Gallery 系列清单（按 gallery 页展示顺序）
@@ -374,7 +374,10 @@ Archive 故意没有 caption / date / location / desc / meta，因为它的定�
 - **`createSwipeControl(rootEl, hooks)`** — 手势控制器：10px 迟滞 + 方向锁定（竖向让给原生滚动）、
   1:1 跟手、松手决策、两段式换图动画（滑出渐隐 → swap → 反向滑入渐显）、拖拽后吞 click 防误触
 - **手感参数**都在 `createSwipeControl` 顶部（HYSTERESIS/COMMIT_DIST/OUT_DIST/IN_DIST/FLICK_CLOSE），改前三思
-- **减弱动态**：`fluidReducedMotion()` 每次现查系统设置，开了就只做淡入淡出、不做位移
+- **`fluidReveal(el)`** — 滚动浮现：元素第一次进入视野且图片解码完成后，从下方 14px 轻轻浮上来（450ms 无回弹）。
+  gallery 卡片 / series 网格项 / archive 瀑布流都在创建元素时调用它；同批进入视野的按屏幕位置自上而下错开 50ms；
+  每张只浮现一次；切换 Archive 年份重新渲染 = 重新浮现（有意的）
+- **减弱动态**：`fluidReducedMotion()` 每次现查系统设置，开了就只做淡入淡出、不做位移（浮现也一样：只淡入不上浮）
 
 ### 图片
 - 本地图片放在 `assets/images/` 对应子文件夹

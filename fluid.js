@@ -94,6 +94,60 @@ function project(velocity) {
 }
 
 
+// ── 滚动浮现：照片第一次进入视野时，从下方轻轻浮上来 ─────────────
+// 展厅隐喻：走到哪面墙，哪面墙的作品浮现。每张只浮现一次，永不再藏回去。
+// 克制线（防"网页味"）：位移只有 14px、450ms、无回弹；
+// 同一批进入视野的照片按屏幕位置从上到下错开 50ms，形成瀑布感；
+// 图片解码完成后才开始浮现（慢网速下不给空框做入场动画）；
+// 系统开了"减弱动态"就只淡入、不位移。
+var revealObserver = null;                 // 全页共用一个观察器（懒创建）
+
+function fluidReveal(el) {
+  // 老浏览器没有 IntersectionObserver：不做动画，直接正常显示
+  if (typeof IntersectionObserver === 'undefined') return;
+
+  // 初始态：透明 + 藏在下方 14px（减弱动态时不位移，只准备淡入）
+  el.style.opacity = '0';
+  if (!fluidReducedMotion()) el.style.transform = 'translateY(14px)';
+
+  if (!revealObserver) {
+    revealObserver = new IntersectionObserver(function(entries) {
+      // 同一批进入视野的元素，按屏幕上的位置排序（先上后下、先左后右），
+      // 依次错开 50ms —— 打开页面时首屏照片自上而下浮现
+      var visible = entries.filter(function(en) { return en.isIntersecting; });
+      visible.sort(function(a, b) {
+        return (a.boundingClientRect.top - b.boundingClientRect.top)
+            || (a.boundingClientRect.left - b.boundingClientRect.left);
+      });
+      visible.forEach(function(en, i) {
+        revealObserver.unobserve(en.target);              // 只浮现一次
+        revealWhenReady(en.target, Math.min(i * 50, 400)); // 错峰上限 400ms
+      });
+    });
+  }
+  revealObserver.observe(el);
+}
+
+// 等元素里的图片解码完成，再延迟 delay 毫秒开始浮现
+function revealWhenReady(el, delay) {
+  var img = el.tagName === 'IMG' ? el : el.querySelector('img');
+  // 图片还没加载完就先等它（decode 失败也照常浮现，不卡死）
+  var ready = (img && !img.complete && typeof img.decode === 'function')
+    ? img.decode().catch(function() {})
+    : Promise.resolve();
+
+  ready.then(function() {
+    setTimeout(function() {
+      el.style.transition = 'opacity 0.45s ease-out, transform 0.45s ease-out';
+      el.style.opacity = '';                // 清掉内联值 = 回到正常状态，触发过渡
+      el.style.transform = '';
+      // 过渡结束后把 transition 也清掉，不影响元素原有的悬停/按压动效
+      setTimeout(function() { el.style.transition = ''; }, 500);
+    }, delay);
+  });
+}
+
+
 // ── 滑动控制器：接管一个 Lightbox 的所有横向手势 + 翻页动画 ────────
 // 页面只需要提供 hooks（钩子），引擎不关心页面的数据结构：
 //   isActive()   → Lightbox 当前是否打开

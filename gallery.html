@@ -71,8 +71,9 @@
   </main>
 
 
-  <!-- 先加载数据文件，再执行渲染逻辑 -->
+  <!-- 先加载数据文件和交互引擎（滚动浮现用），再执行渲染逻辑 -->
   <script src="data.js"></script>
+  <script src="fluid.js"></script>
   <script>
     // 把 allSeries 数组渲染成系列卡片
     var grid = document.getElementById('series-grid');
@@ -107,6 +108,7 @@
           (metaLine ? '<p class="text-xs text-site-muted mt-2 tracking-wide">' + metaLine + '</p>' : '') +
         '</div>';
 
+      fluidReveal(card);   // 滚动浮现：第一次进入视野时从下方轻轻浮上来
       grid.appendChild(card);
     });
   </script>

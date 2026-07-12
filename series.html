@@ -314,6 +314,7 @@
           badge +
         '</div>' +
         (caption ? '<p class="mt-2 text-xs text-site-muted">' + caption + '</p>' : '');
+      fluidReveal(el);   // 滚动浮现：第一次进入视野时从下方轻轻浮上来
       return el;
     }
 

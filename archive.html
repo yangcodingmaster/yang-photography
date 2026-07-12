@@ -251,6 +251,7 @@
         img.loading   = 'lazy';
         img.className = 'masonry-item w-full';
         img.addEventListener('click', function() { openLightbox(i); });
+        fluidReveal(img);   // 滚动浮现：第一次进入视野时从下方轻轻浮上来
         masonry.appendChild(img);
       });
     }
