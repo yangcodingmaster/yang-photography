@@ -55,7 +55,7 @@
   <!-- 页面标题区 -->
   <header class="max-w-6xl mx-auto px-6 pt-16 pb-12">
     <h1>
-      <span class="block font-display text-4xl">Gallery</span>
+      <span class="block font-display text-4xl tracking-tight">Gallery</span>
       <span class="block font-zh text-sm text-site-muted mt-2">作品集</span>
     </h1>
     <!-- 短分割线：左对齐、不横跨全宽，与标题左缘呼应 -->
@@ -71,18 +71,20 @@
   </main>
 
 
-  <!-- 先加载数据文件，再执行渲染逻辑 -->
+  <!-- 先加载数据文件和交互引擎（滚动浮现用），再执行渲染逻辑 -->
   <script src="data.js"></script>
+  <script src="fluid.js"></script>
   <script>
     // 把 allSeries 数组渲染成系列卡片
     var grid = document.getElementById('series-grid');
     allSeries.forEach(function(series) {
 
       // 创建卡片：点击跳转到 series.html?id=系列ID
-      // 注意：没有 hover overlay / scale 等"网页味"动效，卡片本身可点即可
+      // 注意：没有 hover overlay 等"网页味"悬停动效；但有一个极轻的"按压态"——
+      // 按下瞬间缩到 0.99（即时反馈），松开 100ms 缓出。这是有意加的，不要"修复"掉
       var card = document.createElement('a');
       card.href = 'series.html?id=' + series.id;
-      card.className = 'block';
+      card.className = 'block transition-transform duration-100 ease-out active:scale-[0.99] active:duration-0';
 
       // 拼接年份/地点，空字段自动跳过（避免出现 "2025 ·  · " 这种残缺分隔符）
       var metaParts = [];
@@ -94,7 +96,7 @@
       var coverSrc = series.cover || '';
 
       card.innerHTML =
-        // 封面图片区域：4:3 容器，纯静态，没有任何悬停效果
+        // 封面图片区域：4:3 容器，没有悬停效果（按压反馈在卡片整体上）
         '<div class="relative aspect-[4/3] overflow-hidden bg-site-surface">' +
           '<img src="' + coverSrc + '" alt="' + series.titleZh + ' 封面" class="w-full h-full object-cover" />' +
         '</div>' +
@@ -106,6 +108,7 @@
           (metaLine ? '<p class="text-xs text-site-muted mt-2 tracking-wide">' + metaLine + '</p>' : '') +
         '</div>';
 
+      fluidReveal(card);   // 滚动浮现：第一次进入视野时从下方轻轻浮上来
       grid.appendChild(card);
     });
   </script>
