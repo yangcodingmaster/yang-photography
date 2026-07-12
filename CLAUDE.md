@@ -10,11 +10,11 @@
 | 项目 | 说明 |
 |------|------|
 | **项目名** | 赵洋 个人摄影作品集 |
-| **阶段** | 核心功能完成，两个真实系列已上线，文案和更多系列待填入 |
-| **托管目标** | GitHub Pages（静态站点，无后端，无需服务器） |
+| **阶段** | 核心功能完成，8 个 Gallery 系列 + 5 年 Archive 散片已上线，**已部署到 GitHub Pages**，文案待逐张填入 |
+| **托管** | GitHub Pages：仓库 `yangcodingmaster/yang-photography`，线上地址 https://yangcodingmaster.github.io/yang-photography/ |
 | **技术栈** | 纯 HTML + Tailwind CSS（CDN 版）+ 原生 JavaScript |
 | **语言** | 中英双语（目前两种语言同时展示，不做切换按钮） |
-| **照片** | 两个真实系列已上线（Defocused、Photos of 2025），demo 系列保留 |
+| **照片** | 8 个 Gallery 系列（5 普通 + 3 分章，约 200 张）+ Archive 散片（2021–2025，共 123 张），均为真实作品，已无 demo |
 
 **核心原则：代码必须人类可读。**
 任何一行代码，加上注释后，非程序员也应该能大致猜出它的作用。
@@ -30,13 +30,27 @@
 | `series.html` 系列详情 | ✅ 完成 | 瀑布流网格 + 展览级 Lightbox + 分章支持 + 组图支持 |
 | `archive.html` Archive | ✅ 完成 | 散片档案，按年份切换 + 瀑布流 + 纯图 Lightbox（无文字字段） |
 | `about.html` 关于页 | ✅ 完成 | 结构完成，文案为占位内容待替换 |
-| `data.js` 数据文件 | ✅ 完成 | Gallery（2 个真实系列 + demo）+ Archive（按年份的空数组待填） |
-| Defocused 系列 | ✅ 完成 | 6 张照片，虚焦主题，2024，北京上海 |
-| Photos of 2025 系列 | ✅ 完成 | 4 个章节共 52 张照片，分章系列 |
-| 填写真实文案 | ⬜ 待完成 | 系列 descZh/descEn、照片 caption/desc、关于页 |
+| `data.js` 数据文件 | ✅ 完成 | Gallery 8 个系列（含 allSeries / allPhotos / allChapters）+ Archive 5 年（allArchive） |
+| Gallery 系列 | ✅ 上线 | 见下方"Gallery 系列清单"，共 8 个，约 200 张照片 |
+| Archive 散片 | ✅ 上线 | 2021–2025 五年，共 123 张（纯图，无文字字段） |
+| 图片压缩 | ✅ 完成 | 全部转为网页尺寸（HEIC→JPEG，长边 2560 / 质量 90） |
 | 路径空格清理 | ✅ 完成 | 全部重命名为连字符形式，可直接部署 |
-| GitHub 仓库创建 | ⬜ 待完成 | 建好后上传即可通过链接访问 |
-| GitHub Pages 上线 | ⬜ 待完成 | 仓库建好后开启，约 2 分钟生效 |
+| GitHub 仓库 + Pages | ✅ 上线 | `yangcodingmaster/yang-photography`，Pages 已 built |
+| `add-gallery-series` skill | ✅ 完成 | 固化"加 Gallery 系列"工作流，见下方"配套 skill" |
+| 填写真实文案 | ⬜ 进行中 | 各系列 descZh/descEn、照片 caption/desc、关于页（作者逐张手填） |
+
+### Gallery 系列清单（按 gallery 页展示顺序）
+
+| id | 标题（中 / 英） | 类型 | 照片数 |
+|----|----------------|------|--------|
+| `Defocused` | 虚焦之一 / Defocused (i) | 普通 | 6 |
+| `defocused-uk` | 虚焦之二 / Defocused (ii) | 普通 | 7 |
+| `in-transfer` | 传输中 / In Transfer | 普通 | 10 |
+| `goodbye-ucl` | 再见，UCL / Goodbye, UCL | 普通 | 16 |
+| `lake-district-collections` | 在湖区 / Lake District Collections | 普通 | 26 |
+| `photos-of-2025` | 照片记忆｜2025 / Photos of 2025 | 分章（4 章） | 52 |
+| `photos-of-2024` | 照片记忆｜2024 / Photos of 2024 | 分章（3 章） | 53 |
+| `photos-of-2023` | 照片记忆｜2023 / Photos of 2023 | 分章（4 章） | 34 |
 
 ---
 
@@ -57,18 +71,24 @@
 ├── assets/
 │   └── images/
 │       ├── README.txt
-│       ├── gallery/                # ⭐ 所有 Gallery 系列放这里
-│       │   ├── Defocused/          # 普通系列（id 与文件夹名一致）
-│       │   │   ├── 01.jpeg         # 封面由 data.js 的 cover 字段指定（不限定第一张）
-│       │   │   └── 02–06.jpeg
-│       │   └── photos-of-2025/     # 分章系列（id 与文件夹名一致）
-│       │       ├── tail-of-the-second-year/   # 01–16.jpeg
-│       │       ├── the-summer/                # 17–33.jpeg
-│       │       ├── the-last-fall/             # 34–45.jpeg
-│       │       └── images-that-remain/        # 46–52.jpg
+│       ├── gallery/                # ⭐ 所有 Gallery 系列放这里（id = 文件夹名）
+│       │   ├── Defocused/                    # 普通系列，01–06.jpeg
+│       │   ├── defocused-uk/                 # 普通系列，01–07.jpeg
+│       │   ├── in-transfer/                  # 普通系列，01–10.jpeg
+│       │   ├── goodbye-ucl/                  # 普通系列，01–16.jpeg
+│       │   ├── lake-district-collections/    # 普通系列，01–26.jpeg
+│       │   ├── photos-of-2025/               # 分章系列（4 章子文件夹，01–52）
+│       │   ├── photos-of-2024/               # 分章系列（3 章子文件夹）
+│       │   └── photos-of-2023/               # 分章系列（4 章子文件夹）
+│       │       # 封面统一由 data.js 的 cover 字段指定（不限定第一张）
 │       └── archive/                # Archive 散片，按年份归档
-│           ├── 2025/
-│           └── 2024/
+│           ├── 2021/  2022/  2023/  2024/  2025/
+│
+├── .claude/
+│   └── skills/
+│       └── add-gallery-series/     # 配套 skill：固化"加 Gallery 系列"工作流
+│           ├── SKILL.md
+│           └── scripts/convert_photos.sh   # HEIC→JPEG + 压缩 2560/90 + 规范命名
 │
 └── CLAUDE.md               # 本文件
 ```
@@ -92,10 +112,11 @@
 - 导航融入纸面（无背景无分割线），全英文：Yang · Gallery · Archive · About
 
 ### 作品集页 `gallery.html`
+- 头部：英文大标题 `Gallery` 在上、中文小灰 `作品集` 在下，下方一条**左对齐短分割线**（`w-20`，不横跨全宽），与 Archive 头部同构
 - 从 `data.js` 读取 `allSeries`，渲染成 3 列网格
-- 每格显示：封面图、中文标题、英文标题、年份、地点、照片数量
+- 每格显示：封面图、中文标题、英文标题、年份、地点
 - 封面图取法：统一用 `series.cover`（所有系列都显式指定，不再回退第一张）
-- 悬停有轻微放大 + 半透明遮罩提示
+- 卡片纯静态、无悬停放大/遮罩等"网页味"动效，整卡可点即跳 `series.html?id=`
 
 ### 系列详情页 `series.html`
 - 读取 URL 中的 `?id=` 参数，从 `data.js` 找到对应系列
@@ -120,11 +141,17 @@
 ### Archive 页 `archive.html`
 - 散片档案，和 Gallery 平级（不是子集）。所有"不成系列"的照片放这里
 - 数据来自 `data.js` 的 `allArchive`，按年份组织（key 是年份字符串）
-- 页面顶部年份小导航：点击切换年份，一次只显示一年的照片，默认进入最新年份
+- 头部：英文大标题 `Archive` + 中文小灰 `散片档案`，下方左对齐短分割线（与 Gallery 同构）
+- **年份导航有两处、内容一致**（`fillYearNav(container)` 复用同一份逻辑）：
+  - 顶部年份小导航：点击切换年份，一次只显示一年，默认进入最新年份
+  - **底部年份导航**（镜像，居中）：看完一年滑到底可直接切换，切换后平滑滚回顶部
 - 瀑布流布局（CSS columns，3 列；中屏 2 列；窄屏 1 列），保持照片原始比例
 - 照片有 1px 黑色描边（和首页一致）
 - 点击照片打开**纯图 Lightbox**：没有右侧文字面板，因为 Archive 故意不要任何字段
-  - Esc / × / 点背景关闭，← → 翻页，支持触摸滑动
+  - 背景纯不透明纸面（`bg-site-bg`，**不加模糊**），与 gallery/series 一致
+  - 右上角出口 `→ Way out`（不是 ×），与 series.html 统一
+  - **不循环**：到末尾再 → 进入结束卡 `view-end`（游览到此结束 / Your visit is over），结束卡再 → 关闭；第一张往 ← 停住
+  - 键盘 ← → 翻页、Esc 退出、支持触摸滑动
 - 年份内顺序 = 数组顺序：把新照片放数组前面 = 最新在最上面
 
 ### 关于页 `about.html`
@@ -246,11 +273,15 @@ Archive 故意没有 caption / date / location / desc / meta，因为它的定�
 
 ### 如何添加一个普通系列
 
+> 💡 **有配套 skill 自动处理**：直接把照片文件夹丢进 `assets/images/gallery/`，
+> 跟 Claude 说「加一个系列，放 XX 旁边，叫 XX」即可触发 `add-gallery-series` skill，
+> 它会自动转码压缩、规范命名、写入 data.js。下面是它背后的手动步骤（供理解/手动操作）：
+
 1. 在 `assets/images/gallery/` 下新建文件夹，名字与计划使用的 `id` 完全一致（用连字符）
-2. 放入照片，按 `01.jpg`、`02.jpg` 顺序命名
-3. 打开 `data.js`，在 `allSeries` 末尾添加新对象（不加 `type`，但要加 `cover` 指定封面）
-4. 在 `allPhotos` 里添加对应的 key 和照片数组（路径形如 `assets/images/gallery/系列名/01.jpg`）
-5. 刷新 `gallery.html` 查看效果
+2. 放入照片，按 `01.jpeg`、`02.jpeg` 顺序命名（相机直出的 HEIC 需先转 JPEG，见下方"图片压缩标准"）
+3. 打开 `data.js`，在 `allSeries` 对应位置添加新对象（不加 `type`，但要加 `cover` 指定封面）
+4. 在 `allPhotos` 里添加对应的 key 和照片数组（**每张照片每个字段独占一行**，文本字段留空待填）
+5. 刷新 `gallery.html` 查看效果（注意浏览器会缓存 data.js，用 Cmd+Shift+R 硬刷新）
 
 ### 如何添加一个分章系列
 
@@ -268,9 +299,31 @@ Archive 故意没有 caption / date / location / desc / meta，因为它的定�
 4. 想加新一年（如 2026）：在 `allArchive` 里加 `'2026': []`，年份导航会自动出现
 5. 刷新 `archive.html`，最新照片会出现在最上面
 
-### 支持的图片格式
+### 支持的图片格式与压缩标准
 
-`.jpg` / `.jpeg` / `.png` / `.webp` / `.heic` / `.heif` 均可；浏览器支持度 HEIF 稍低，建议转为 JPEG。
+- 浏览器最终用的是 **JPEG**。相机直出常是 HEIC/HIF（哪怕扩展名写成 `.jpeg`），HEIF 浏览器支持度低，**必须转成真 JPEG**。
+- **图片压缩标准（固定）**：HEIC→JPEG、**长边 2560px、质量 90**。这是网页展示的安全甜点——视觉无损、体积约降到 1/10。改这个标准要另行说明（如印刷级别）。
+- 转码压缩交给 `add-gallery-series` skill 的 `scripts/convert_photos.sh` 自动完成（macOS 用 `sips`）。
+- ⚠️ 入库的都是缩小过的网页版；**HEIC 原片请在仓库外另存备份**（印刷/二次修图要用原片）。
+
+---
+
+## 配套 skill：`add-gallery-series`
+
+位于 `.claude/skills/add-gallery-series/`，把"往 Gallery 加一个系列"的整套流程固化下来。
+
+**触发**：把照片文件夹丢进 `assets/images/gallery/`，说一句「加一个系列，放 XX 旁边，叫 XX」。
+
+**它做的事**：
+1. **探测真实格式** —— 不信扩展名（相机直出常是 HEIC 伪装成 `.jpeg`，文件名还可能带前导空格）
+2. **转码 + 压缩 + 命名** —— `scripts/convert_photos.sh`：HEIC→JPEG、长边 2560 / 质量 90、自然排序零填充成 `01.jpeg…`，并自检（不删源文件夹）
+3. **写入 data.js** —— allSeries + allPhotos 两处；先备份、先读最新文件（防止冲掉作者并发的手动编辑）；照片每字段独占一行、文本字段留空待填
+4. **验证** —— `node --check` + 每个 src 与磁盘文件交叉核对 + 预览封面加载
+5. **报告** —— 并提醒原片备份、硬刷新、续集编号风格统一
+
+**两条固定约定（作者已拍板）**：压缩参数 2560/90 写死不问；文本字段一律留空待作者自己填。
+
+> 分章系列（`type: 'sectioned'`）图片处理相同，但 Step 3 写入的是 `allChapters` 而非 `allPhotos`。
 
 ---
 
@@ -370,10 +423,10 @@ tailwind.config = {
 ## 待办 / 未来可能的方向
 
 ### 近期待完成
-- [ ] 填写真实文案（Photos of 2025 各章节 descZh/descEn，Defocused 各照片 caption/desc）
+- [ ] 填写真实文案（各系列 descZh/descEn，照片 caption/date/location/desc/meta，逐张手填）
 - [ ] 填写关于页自我介绍
-- [ ] 往 `assets/images/archive/` 下面放散片（按年份归档），同步更新 `data.js` 的 `allArchive`
-- [ ] 创建 GitHub 仓库并部署到 GitHub Pages
+- [x] ~~往 Archive 放散片（2021–2025 已录入）~~
+- [x] ~~创建 GitHub 仓库并部署到 GitHub Pages~~（已上线）
 
 ### 未来可能的方向
 > 现阶段不实现，等需求明确后再讨论。
