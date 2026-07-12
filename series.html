@@ -32,12 +32,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet" />
 
-  <!-- Lightbox 动画 + 照片区拖拽鼠标样式 -->
+  <!-- Lightbox 动画 + 手势相关样式 -->
   <style>
     #lightbox {
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.25s ease;
+      /* 竖向滚动交给浏览器（组图区），横向手势由 fluid.js 接管 */
+      touch-action: pan-y;
+      user-select: none;
+      -webkit-user-select: none;
     }
     #lightbox.active {
       opacity: 1;
@@ -50,14 +54,28 @@
     #lightbox.active #lightbox-img {
       transform: scale(1);
     }
-    /* 照片区：抓手光标，提示可拖拽 */
-    #lightbox-photo-area {
+    /* 可拖拽区域：抓手光标提示"这是能推动的实物" */
+    #view-photo, #view-group, #view-chapter, #view-end {
       cursor: grab;
-      user-select: none;
-      -webkit-user-select: none;
     }
-    #lightbox-photo-area.grabbing {
-      cursor: grabbing;
+    /* 拖拽进行中（fluid.js 会给 #lightbox 加这个类）：全局变成抓紧光标 */
+    #lightbox.fluid-grabbing, #lightbox.fluid-grabbing * {
+      cursor: grabbing !important;
+    }
+    /* 按压态：按下瞬间缩小（无过渡 = 即时反馈），松开 100ms 缓出 */
+    .pressable {
+      transition: transform 0.1s ease-out;
+    }
+    .pressable:active {
+      transform: scale(0.97);
+      transition: none;
+    }
+    /* 系统开了"减弱动态效果"：取消开场缩放，只保留淡入 */
+    @media (prefers-reduced-motion: reduce) {
+      #lightbox-img {
+        transform: none !important;
+        transition: none !important;
+      }
     }
   </style>
 </head>
@@ -92,7 +110,7 @@
     <!-- 系列标题（由 JS 填入） -->
     <h1 id="series-title">
       <span id="title-zh" class="block font-zh text-4xl font-light"></span>
-      <span id="title-en" class="block font-display text-site-muted text-xl mt-2"></span>
+      <span id="title-en" class="block font-display text-site-muted text-xl mt-2 tracking-tight"></span>
     </h1>
 
     <!-- 年份、地点、照片数量 -->
@@ -128,7 +146,7 @@
     <!-- 出口（右上角）：像展览馆出口的指示牌 -->
     <!-- 首字母大写，→ 前缀让"这是出口"的意图更明确 -->
     <button onclick="closeLightbox()"
-      class="absolute top-6 right-8 text-xs text-site-muted hover:text-site-text transition-colors tracking-widest">
+      class="pressable absolute top-6 right-8 text-xs text-site-muted hover:text-site-text transition-colors tracking-widest">
       → Way out
     </button>
 
@@ -178,7 +196,7 @@
     <div id="view-chapter" class="flex-col items-center justify-center text-center px-12 max-w-lg" style="display:none">
       <p  id="chapter-index"    class="text-xs text-site-muted tracking-widest uppercase mb-10"></p>
       <h2 id="chapter-title-zh" class="font-zh text-5xl font-light mb-3"></h2>
-      <p  id="chapter-title-en" class="font-display text-site-muted text-xl mb-10"></p>
+      <p  id="chapter-title-en" class="font-display text-site-muted text-xl mb-10 tracking-tight"></p>
       <p  id="chapter-desc-zh"  class="font-zh text-sm text-site-muted leading-loose"></p>
       <p  id="chapter-desc-en"  class="font-display text-xs text-site-muted mt-5 leading-loose"></p>
       <p class="mt-16 text-xs text-site-muted opacity-30">→ 滑动 / 按键继续</p>
@@ -187,15 +205,16 @@
     <!-- ④ 结束卡：所有照片看完后出现，再按 → 就关闭 Lightbox -->
     <div id="view-end" class="flex-col items-center justify-center text-center px-12 max-w-lg" style="display:none">
       <h2 class="font-zh text-4xl font-light mb-4">游览到此结束</h2>
-      <p class="font-display text-site-muted text-lg">Your visit is over</p>
+      <p class="font-display text-site-muted text-lg tracking-tight">Your visit is over</p>
       <p class="mt-16 text-xs text-site-muted opacity-30 tracking-widest">→ Way out</p>
     </div>
 
   </div>
 
 
-  <!-- 先加载数据，再执行页面逻辑 -->
+  <!-- 先加载数据和手势引擎，再执行页面逻辑 -->
   <script src="data.js"></script>
+  <script src="fluid.js"></script>
   <script>
 
     // ── 读取系列 ID ───────────────────────────────────────────────
@@ -313,7 +332,7 @@
         // ── 章节标题：可点击，点击后在 Lightbox 打开对应章节卡 ──
         // 视觉提示：cursor-pointer + hover 时整体淡一点
         var header = document.createElement('div');
-        header.className = 'flex items-baseline gap-4 mb-6 pb-3 border-b border-site-border cursor-pointer hover:opacity-60 transition-opacity';
+        header.className = 'flex items-baseline gap-4 mb-6 pb-3 border-b border-site-border cursor-pointer hover:opacity-60 active:opacity-40 transition-opacity';
         header.onclick = (function(idx) { return function() { openLightbox(idx); }; })(cardIdx);
         header.innerHTML =
           '<h3 class="font-zh text-xl font-light">' + chapter.titleZh + '</h3>' +
@@ -347,23 +366,15 @@
 
     function openLightbox(index) {
       currentIndex = index;
+      swipeControl.reset();     // 清掉上一次遗留的位移/透明度
       updateLightbox();
       document.getElementById('lightbox').classList.add('active');
       document.body.style.overflow = 'hidden';
     }
     function closeLightbox() {
+      swipeControl.reset();     // 中途关闭也要清场，下次打开才干净
       document.getElementById('lightbox').classList.remove('active');
       document.body.style.overflow = '';
-    }
-    // 翻页：不再循环。
-    //   - 走到末尾的结束卡之后，再按 → 就关闭 Lightbox（走出展厅）
-    //   - 已经在第一张往左 ← 就停住（开头不需要仪式感）
-    function changePhoto(direction) {
-      var next = currentIndex + direction;
-      if (next >= renderItems.length) { closeLightbox(); return; }
-      if (next < 0) return;     // 第一张往左不动
-      currentIndex = next;
-      updateLightbox();
     }
 
     // 计数：照片 + 组图各算 1，跳过章节卡和结束卡
@@ -426,6 +437,7 @@
           var img = document.createElement('img');
           img.src = photo.src; img.alt = photo.alt || '';
           img.className = 'w-full'; img.setAttribute('loading', 'lazy');
+          img.draggable = false;   // 禁掉浏览器原生的"拖图片"，让位给我们的滑动手势
           stack.appendChild(img);
         });
         setField('group-caption',  item.caption);
@@ -454,78 +466,45 @@
       el.textContent = text || ''; el.style.display = text ? '' : 'none';
     }
 
-    // 键盘
+    // ── 手势 + 翻页动画：全部交给 fluid.js 的滑动控制器 ──────────
+    // 一个控制器挂在 #lightbox 上，覆盖照片/组图/章节卡/结束卡四种视图：
+    // 1:1 跟手拖拽、松手按速度决定翻页或弹回、边界橡皮筋、方向感换图动画
+    var swipeControl = createSwipeControl(document.getElementById('lightbox'), {
+
+      // Lightbox 打开着才接管手势
+      isActive: function() {
+        return document.getElementById('lightbox').classList.contains('active');
+      },
+
+      // 当前应该跟手移动的视图容器（照片/组图/章节卡/结束卡）
+      getView: function() {
+        var kind = renderItems[currentIndex].kind;
+        if (kind === 'group')   return document.getElementById('view-group');
+        if (kind === 'chapter') return document.getElementById('view-chapter');
+        if (kind === 'end')     return document.getElementById('view-end');
+        return document.getElementById('view-photo');
+      },
+
+      // 边界：第一张不能再往回；结束卡不能再往前（往前 = 走出展厅）
+      canPrev: function() { return currentIndex > 0; },
+      canNext: function() { return currentIndex < renderItems.length - 1; },
+
+      // 真正换内容：改索引 + 重新渲染（控制器保证不会越界调用）
+      swap: function(direction) {
+        currentIndex += direction;
+        updateLightbox();
+      },
+
+      // 走出展厅：结束卡上用力一甩，或键盘/滑动再往前
+      flickClose: closeLightbox,
+    });
+
+    // 键盘：← → 翻页走和手势相同的动画管路，Esc 直接退出
     document.addEventListener('keydown', function(e) {
       if (!document.getElementById('lightbox').classList.contains('active')) return;
-      if (e.key === 'ArrowLeft')  changePhoto(-1);
-      if (e.key === 'ArrowRight') changePhoto(1);
+      if (e.key === 'ArrowLeft')  swipeControl.slide(-1);
+      if (e.key === 'ArrowRight') swipeControl.slide(1);
       if (e.key === 'Escape')     closeLightbox();
-    });
-
-    // ── 拖拽 / 滑动 ───────────────────────────────────────────────
-    var photoArea   = document.getElementById('lightbox-photo-area');
-    var groupStack  = document.getElementById('group-stack');
-    var chapterView = document.getElementById('view-chapter');
-    var swipeStartX = 0, swipeStartY = 0, isDragging = false;
-    var SWIPE_THRESHOLD = 50;
-
-    // 水平手势优先判断（避免纵向滚动时误触翻页）
-    function isHSwipe(dx, dy) {
-      return Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_THRESHOLD;
-    }
-
-    // 照片区：鼠标
-    photoArea.addEventListener('mousedown', function(e) {
-      swipeStartX = e.clientX; isDragging = true; photoArea.classList.add('grabbing');
-    });
-    document.addEventListener('mouseup', function(e) {
-      if (!isDragging) return;
-      isDragging = false; photoArea.classList.remove('grabbing');
-      var dx = e.clientX - swipeStartX;
-      if (Math.abs(dx) > SWIPE_THRESHOLD) changePhoto(dx < 0 ? 1 : -1);
-    });
-    // 照片区：触控
-    photoArea.addEventListener('touchstart', function(e) {
-      swipeStartX = e.touches[0].clientX; swipeStartY = e.touches[0].clientY;
-    }, { passive: true });
-    photoArea.addEventListener('touchend', function(e) {
-      var dx = e.changedTouches[0].clientX - swipeStartX;
-      var dy = e.changedTouches[0].clientY - swipeStartY;
-      if (isHSwipe(dx, dy)) changePhoto(dx < 0 ? 1 : -1);
-    });
-
-    // 组图区：纵向滚动优先，水平才翻页
-    groupStack.addEventListener('mousedown', function(e) { swipeStartX = e.clientX; isDragging = true; });
-    groupStack.addEventListener('touchstart', function(e) {
-      swipeStartX = e.touches[0].clientX; swipeStartY = e.touches[0].clientY;
-    }, { passive: true });
-    groupStack.addEventListener('touchend', function(e) {
-      var dx = e.changedTouches[0].clientX - swipeStartX;
-      var dy = e.changedTouches[0].clientY - swipeStartY;
-      if (isHSwipe(dx, dy)) changePhoto(dx < 0 ? 1 : -1);
-    });
-
-    // 章节过渡卡
-    chapterView.addEventListener('mousedown', function(e) { swipeStartX = e.clientX; isDragging = true; });
-    chapterView.addEventListener('touchstart', function(e) {
-      swipeStartX = e.touches[0].clientX; swipeStartY = e.touches[0].clientY;
-    }, { passive: true });
-    chapterView.addEventListener('touchend', function(e) {
-      var dx = e.changedTouches[0].clientX - swipeStartX;
-      var dy = e.changedTouches[0].clientY - swipeStartY;
-      if (isHSwipe(dx, dy)) changePhoto(dx < 0 ? 1 : -1);
-    });
-
-    // 结束卡：和章节卡一样的滑动行为（往左滑 / → 关闭，往右滑 / ← 回到最后一张）
-    var endView = document.getElementById('view-end');
-    endView.addEventListener('mousedown', function(e) { swipeStartX = e.clientX; isDragging = true; });
-    endView.addEventListener('touchstart', function(e) {
-      swipeStartX = e.touches[0].clientX; swipeStartY = e.touches[0].clientY;
-    }, { passive: true });
-    endView.addEventListener('touchend', function(e) {
-      var dx = e.changedTouches[0].clientX - swipeStartX;
-      var dy = e.changedTouches[0].clientY - swipeStartY;
-      if (isHSwipe(dx, dy)) changePhoto(dx < 0 ? 1 : -1);
     });
 
   </script>

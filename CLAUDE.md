@@ -37,6 +37,7 @@
 | 路径空格清理 | ✅ 完成 | 全部重命名为连字符形式，可直接部署 |
 | GitHub 仓库 + Pages | ✅ 上线 | `yangcodingmaster/yang-photography`，Pages 已 built |
 | `add-gallery-series` skill | ✅ 完成 | 固化"加 Gallery 系列"工作流，见下方"配套 skill" |
+| 交互升级（fluid.js） | ✅ 完成 | Apple 流体交互：1:1 跟手拖拽、橡皮筋边界、方向感换图、按压态、reduced-motion（`interaction-design` 分支开发） |
 | 填写真实文案 | ⬜ 进行中 | 各系列 descZh/descEn、照片 caption/desc、关于页（作者逐张手填） |
 
 ### Gallery 系列清单（按 gallery 页展示顺序）
@@ -67,6 +68,7 @@
 │
 ├── data.js                 # ⭐ 唯一的数据文件，所有内容只改这里
 │                           #    包含：allSeries、allPhotos、allChapters、allArchive
+├── fluid.js                # 弹簧动画 + 滑动手势引擎（零依赖手写，series/archive 两个 Lightbox 共用）
 │
 ├── assets/
 │   └── images/
@@ -116,7 +118,8 @@
 - 从 `data.js` 读取 `allSeries`，渲染成 3 列网格
 - 每格显示：封面图、中文标题、英文标题、年份、地点
 - 封面图取法：统一用 `series.cover`（所有系列都显式指定，不再回退第一张）
-- 卡片纯静态、无悬停放大/遮罩等"网页味"动效，整卡可点即跳 `series.html?id=`
+- 卡片无悬停放大/遮罩等"网页味"动效，整卡可点即跳 `series.html?id=`
+- 卡片有**极轻的按压态**（按下瞬间 scale 0.99、松开缓出）——这是有意加的即时反馈，不要"修复"掉
 
 ### 系列详情页 `series.html`
 - 读取 URL 中的 `?id=` 参数，从 `data.js` 找到对应系列
@@ -134,7 +137,10 @@
   - **不再循环**：到末尾再 → 进入结束卡，结束卡再 → 关闭 Lightbox（走出展厅）。第一张往 ← 停住
   - **结束卡** `view-end`：游览到此结束 / Your visit is over
   - **右上角出口按钮**：`→ Way out`（取代之前的"关闭 / Esc"），首字母大写不全大写
-  - 键盘 ← → 翻页、Esc 退出、支持触摸滑动
+  - 键盘 ← → 翻页、Esc 退出
+  - **流体手势**（fluid.js）：照片 1:1 跟手拖拽（触摸 + 鼠标统一走 Pointer Events），
+    松手按"惯性投影"决定翻页或弹回；第一张往回拖是橡皮筋阻力；结束卡上用力一甩 = 走出展厅；
+    换图是方向感的滑出/滑入 + 渐隐渐显，键盘翻页走同一条动画管路，连按可无缝改目标
 - **组图**（`group` 类型）：Lightbox 内纵向堆叠 2–5 张照片，右侧共享一组文字说明
 - 四种 Lightbox 视图：`view-photo`（单张）、`view-group`（组图）、`view-chapter`（章节卡）、`view-end`（结束卡）
 
@@ -151,7 +157,8 @@
   - 背景纯不透明纸面（`bg-site-bg`，**不加模糊**），与 gallery/series 一致
   - 右上角出口 `→ Way out`（不是 ×），与 series.html 统一
   - **不循环**：到末尾再 → 进入结束卡 `view-end`（游览到此结束 / Your visit is over），结束卡再 → 关闭；第一张往 ← 停住
-  - 键盘 ← → 翻页、Esc 退出、支持触摸滑动
+  - 键盘 ← → 翻页、Esc 退出；`‹ ›` 箭头按钮走和手势相同的方向动画
+  - **流体手势**（fluid.js）：与 series.html 完全一致的 1:1 跟手拖拽 + 橡皮筋 + 惯性决策（现在也支持鼠标拖拽）
 - 年份内顺序 = 数组顺序：把新照片放数组前面 = 最新在最上面
 
 ### 关于页 `about.html`
@@ -350,12 +357,24 @@ Archive 故意没有 caption / date / location / desc / meta，因为它的定�
 - **`makeGridItem(item)`** — 根据 kind 创建网格 DOM 元素
 - **`updateLightbox()`** — 根据 `currentIndex` 读取 `renderItems`，分发给四个视图（`view-photo` / `view-group` / `view-chapter` / `view-end`）
 - **`setField(id, value)`** — 填充文字并按有无内容自动显示/隐藏元素
-- **`isHSwipe(dx, dy)`** — 判断触摸方向，防止纵向滚动误触发翻页
 - **`chapterCardIndices[chIdx]`** — 每个章节的章节卡在 renderItems 中的索引，瀑布流里的章节标题 onclick 通过它跳转
-- **`changePhoto(direction)`** — 翻页函数：不循环；到末尾再 → 关闭 Lightbox，到开头再 ← 停住
+- **`swipeControl`** — fluid.js 的滑动控制器实例，接管所有翻页（手势 + 键盘）；页面通过 hooks
+  （`isActive / getView / canPrev / canNext / swap / flickClose`）告诉它"当前视图是谁、边界在哪、怎么换内容"
 
 修改 Lightbox 字段显示时，只需改 `updateLightbox()` 里对应视图的 `setField` 调用顺序。
 分章系列 renderItems 的顺序是 `[ch1 card, ch1 photos, ch2 card, ch2 photos, ..., end card]`。
+
+### fluid.js 手势引擎（修改前必读）
+
+系列页和 Archive 的 Lightbox 手势/动画全部来自这一个文件，页面里只有 hooks 接线：
+
+- **`createSpring(onUpdate, onRest)`** — 临界阻尼弹簧（永不回弹），半隐式欧拉积分，支持随时改目标、带初速度启动
+- **`rubberband(offset, dimension)`** — 边界橡皮筋阻力（Apple 公式，c=0.55）
+- **`project(velocity)`** — 惯性投影：按松手速度预测停点，决定翻页还是弹回
+- **`createSwipeControl(rootEl, hooks)`** — 手势控制器：10px 迟滞 + 方向锁定（竖向让给原生滚动）、
+  1:1 跟手、松手决策、两段式换图动画（滑出渐隐 → swap → 反向滑入渐显）、拖拽后吞 click 防误触
+- **手感参数**都在 `createSwipeControl` 顶部（HYSTERESIS/COMMIT_DIST/OUT_DIST/IN_DIST/FLICK_CLOSE），改前三思
+- **减弱动态**：`fluidReducedMotion()` 每次现查系统设置，开了就只做淡入淡出、不做位移
 
 ### 图片
 - 本地图片放在 `assets/images/` 对应子文件夹
