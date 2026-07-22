@@ -375,7 +375,8 @@
       pageImg.src = photo.src;
       pageImg.alt = photo.alt || (currentYear + ' 散片');
       pageNote.textContent = photo.note || '';   // 没写 note 就是空，CSS 会把整行隐藏
-      pageFolio.textContent = currentYear + ' — ' + (currentIndex + 1) + ' / ' + photos.length;
+      // 页码不带年份：左上角已标注这本书是哪年，这里只报"第几页 / 共几页"
+      pageFolio.textContent = (currentIndex + 1) + ' / ' + photos.length;
       readerTitle.textContent = currentYear;
     }
 
