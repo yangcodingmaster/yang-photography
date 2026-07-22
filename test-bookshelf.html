@@ -145,8 +145,7 @@
 
     /* ════════════════════════════════════════════
        阅读视图（reader）：翻开书之后
-       版式骨架不变：主页大图 + 页码，右侧露出下一页的窄边；
-       "书缝"退化成一根 1px 分割线——版面语言，不是道具语言。
+       一次一页：大图 + 页脚文字，没有下一页预览（试过，动画不连贯）。
        ════════════════════════════════════════════ */
     #reader {
       position: fixed;
@@ -174,47 +173,38 @@
       border: 1px solid var(--text);
       transition: opacity 0.28s ease, transform 0.28s ease;
     }
-    /* 页脚：年份 + 页码（folio） */
-    .page-main .folio {
+    /* ── 页脚文字区 ──
+       两行：第一行是自定义文字（note，没写就不显示），第二行是页码。
+       ✏️ 自定义文字在 data.js 的 allArchive 里逐张添加 note 字段，
+          写法见本文件底部 renderPage() 上方的说明注释。 */
+    .page-main .note {
       margin-top: 1.4rem;
-      font-size: 0.95rem;
+      font-family: "Noto Serif SC", serif;   /* 中文用衬线，与全站一致 */
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      transition: opacity 0.28s ease;
+    }
+    .page-main .note:empty { display: none; }  /* 没写 note 就整行消失，不占位 */
+    .page-main .folio {
+      margin-top: 0.6rem;
+      font-size: 0.9rem;
       letter-spacing: 0.28em;
       color: var(--muted);
       transition: opacity 0.28s ease;
     }
 
-    /* 书缝：一根细线 */
-    .gutter { width: 1px; background: var(--border); }
-
-    /* 右侧微露的下一页：安静地立在线右边，暗示还能翻 */
-    .page-peek {
-      width: 88px;
-      position: relative;
-      overflow: hidden;
-      cursor: pointer;
-    }
-    .page-peek img {
-      position: absolute;
-      top: 50%;
-      left: 24px;
-      transform: translateY(-50%);
-      height: 60vh;
-      max-width: none;
-      border: 1px solid var(--text);
-    }
-    /* 已是最后一页：右侧留白即可 */
-    .page-peek.blank img { display: none; }
-
     /* 翻页动画：方向感的滑动+渐隐（与全站 fluid 语言一致） */
     .page-main.turn-next img   { opacity: 0; transform: translateX(-36px); }
     .page-main.turn-prev img   { opacity: 0; transform: translateX(36px); }
+    .page-main.turn-next .note,  .page-main.turn-prev .note,
     .page-main.turn-next .folio, .page-main.turn-prev .folio { opacity: 0; }
 
-    /* 出口（与全站 Way out 同构），落在主页区域内 */
+    /* 出口（与全站 Way out 同构） */
     #reader .way-out {
       position: absolute;
       top: 1.6rem;
-      right: calc(88px + 1px + 2rem);
+      right: 2rem;
       z-index: 2;
       font-size: 1.05rem;
       letter-spacing: 0.06em;
@@ -258,11 +248,8 @@
     <button class="way-out" id="readerExit">&rarr; Back to shelf</button>
     <div class="page-main" id="pageMain">
       <img id="pageImg" src="" alt="" />
+      <div class="note" id="pageNote"></div>
       <div class="folio" id="pageFolio"></div>
-    </div>
-    <div class="gutter"></div>
-    <div class="page-peek" id="pagePeek">
-      <img id="peekImg" src="" alt="" />
     </div>
   </div>
 
@@ -305,9 +292,8 @@
     var readerTitle = document.getElementById('readerTitle');
     var pageMain    = document.getElementById('pageMain');
     var pageImg     = document.getElementById('pageImg');
+    var pageNote    = document.getElementById('pageNote');
     var pageFolio   = document.getElementById('pageFolio');
-    var pagePeek    = document.getElementById('pagePeek');
-    var peekImg     = document.getElementById('peekImg');
 
     var currentYear   = null;   // 当前翻开的是哪一年
     var currentIndex  = 0;      // 当前看到第几张
@@ -336,23 +322,35 @@
       currentYear = null;
     }
 
-    // 渲染当前页：主页照片 + 页码 + 右侧下一页的窄边
+    // ✏️═══════════════ 页脚文字怎么自定义（给作者看） ═══════════════
+    // 每张照片下面可以写一行自己的话（note 字段），显示在照片和页码之间。
+    // 修改位置：data.js → allArchive → 对应年份的数组里，给那张照片加一行 note。
+    // 写法示例（每个字段独占一行，方便手动编辑）：
+    //
+    //   '2023': [
+    //     {
+    //       src: 'assets/images/archive/2023/1.jpeg',
+    //       alt: '',
+    //       note: '多佛白崖下的海湾',        // ← 加这一行，就显示这句话
+    //     },
+    //     {
+    //       src: 'assets/images/archive/2023/2.jpeg',
+    //       alt: '',
+    //     },                                  // ← 不写 note 就只显示页码，不占位
+    //   ],
+    //
+    // 改完刷新页面即可（浏览器缓存 data.js 时用 Cmd+Shift+R 硬刷新）。
+    // ═══════════════════════════════════════════════════════════════
+
+    // 渲染当前页：照片 + 自定义文字（note）+ 页码
     function renderPage() {
       var photos = allArchive[currentYear];
       var photo  = photos[currentIndex];
       pageImg.src = photo.src;
       pageImg.alt = photo.alt || (currentYear + ' 散片');
+      pageNote.textContent = photo.note || '';   // 没写 note 就是空，CSS 会把整行隐藏
       pageFolio.textContent = currentYear + ' — ' + (currentIndex + 1) + ' / ' + photos.length;
       readerTitle.textContent = currentYear;
-
-      // 下一页预览：还有下一张就露它的边，没有就留白
-      var next = photos[currentIndex + 1];
-      if (next) {
-        pagePeek.classList.remove('blank');
-        peekImg.src = next.src;
-      } else {
-        pagePeek.classList.add('blank');
-      }
     }
 
     // 翻页：dir = +1 往后 / -1 往回。旧页滑出渐隐 → 换内容 → 新页滑入
@@ -372,8 +370,6 @@
       }, 280);
     }
 
-    // 右侧露出的下一页：点它 = 翻过去
-    pagePeek.addEventListener('click', function () { turnPage(1); });
     // 主页面左半边点击 = 往回翻，右半边 = 往后翻（正式版会接 fluid.js 手势）
     pageMain.addEventListener('click', function (e) {
       var mid = pageMain.getBoundingClientRect().width / 2;
