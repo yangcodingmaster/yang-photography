@@ -48,7 +48,9 @@
       justify-content: center;
       gap: 8px;
       padding-bottom: 14px;
-      transition: opacity 0.4s ease;
+      /* transform：触屏两步交互里"把选中的书推到屏幕中心"用（JS 计算位移量） */
+      transition: opacity 0.4s ease,
+                  transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
     }
     /* 打开某本书时，其余的书淡出并收拢宽度——
        被翻开的书自动居中，窄屏上书架也不会瞬间超出屏幕 */
@@ -73,9 +75,9 @@
                   transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
                   opacity 0.4s ease;
     }
-    /* hover 展宽只给有光标的设备：触屏上点一下直接翻开，不经过封面预览 */
+    /* hover 展宽只给有光标的设备；触屏走两步交互（.preview 居中预览 → 再点翻开） */
     @media (hover: hover) { .slot:hover { width: 250px; } }
-    .slot.active { width: 250px; }
+    .slot.active, .slot.preview { width: 250px; }
     /* 极轻的按压态（与 gallery 卡片同款）——有意加的即时反馈，不要"修复"掉 */
     .slot:active { transform: scale(0.99); }
 
@@ -94,7 +96,7 @@
       transition: opacity 0.3s ease;
     }
     @media (hover: hover) { .slot:hover .spine-label { opacity: 0; } }
-    .slot.active .spine-label { opacity: 0; }
+    .slot.active .spine-label, .slot.preview .spine-label { opacity: 0; }
 
     /* 封面态：照片图版 + 年份 + 张数（展宽后浮现）
        固定为展开宽度，靠 slot 的 overflow:hidden 裁切，展宽过程中排版不跳动 */
@@ -112,7 +114,7 @@
       transition: opacity 0.35s ease 0.1s;
     }
     @media (hover: hover) { .slot:hover .cover-view { opacity: 1; } }
-    .slot.active .cover-view { opacity: 1; }
+    .slot.active .cover-view, .slot.preview .cover-view { opacity: 1; }
     .cover-view img {
       width: calc(100% - 48px);
       height: 240px;
@@ -185,9 +187,10 @@
       transition: none;
     }
 
-    /* 系统开了"减弱动态效果"：书脊不做展宽动画，直接到位 */
+    /* 系统开了"减弱动态效果"：书脊不做展宽动画、书架不做居中位移动画，直接到位 */
     @media (prefers-reduced-motion: reduce) {
-      .slot { transition: opacity 0.4s ease; }
+      .slot   { transition: opacity 0.4s ease; }
+      #shelf  { transition: opacity 0.4s ease; }
     }
   </style>
 </head>
@@ -293,11 +296,72 @@
           '<div class="text-xs tracking-widest text-site-muted mt-1">' + photos.length + ' PHOTOS</div>' +
         '</div>';
 
-      // 点击 = 翻开这本书
-      slot.addEventListener('click', function () { openBook(year, slot); });
+      // 点击：桌面（有光标）直接翻开；触屏走两步——先居中预览，再点封面才翻开
+      slot.addEventListener('click', function () {
+        if (isTouchMode() && previewSlot !== slot) {
+          previewBook(slot);
+          return;
+        }
+        openBook(year, slot);
+      });
 
       fluidReveal(slot);   // 滚动浮现：书架第一次进入视野时轻轻浮上来（自左而右错开）
       shelf.appendChild(slot);
+    });
+
+    // ══ 触屏两步交互：先居中预览，再点封面翻开 ══════════════════
+    // 手机上没有 hover，点书脊的第一下 = 把这本书推到屏幕中心展开封面
+    // （其他书被挤向两边、超出屏幕的部分被裁掉），再点封面才真正翻开。
+    // 桌面（有光标）不走这套：hover 原位预览 + 点击即翻开，
+    // 若桌面也做居中位移，书架一动光标底下就换了书，会无限抖动。
+
+    var previewSlot = null;   // 当前居中预览的书（触屏专用）
+
+    // 每次点击时现查设备是否无光标（触屏），不在加载时缓存
+    function isTouchMode() {
+      return !window.matchMedia('(hover: hover)').matches;
+    }
+
+    // 把某本书居中展开预览
+    function previewBook(slot) {
+      if (previewSlot) previewSlot.classList.remove('preview');
+      previewSlot = slot;
+      slot.classList.add('preview');
+      centerShelfOn(slot);
+    }
+
+    // 计算书架需要平移多少，才能让这本书（按展开后的目标宽度）的中心对准屏幕中心
+    // 按目标布局直接算，不等动画走完——位移和展宽走同一条缓动曲线，同时到位
+    function centerShelfOn(slot) {
+      var slots = Array.prototype.slice.call(shelf.children);
+      var gap = 8;
+      // 每本书的目标宽度：被选中的 = 250，其余 = 各自书脊厚度
+      var widths = slots.map(function (s) {
+        return (s === slot) ? 250 : parseFloat(s.style.getPropertyValue('--t'));
+      });
+      var total = widths.reduce(function (a, b) { return a + b; }, 0) + gap * (slots.length - 1);
+      var idx = slots.indexOf(slot);
+      var before = 0;
+      for (var i = 0; i < idx; i++) before += widths[i] + gap;
+      // 书架 flex 居中：左缘 = (视口宽 - 总宽) / 2；再平移把书心推到屏心
+      var slotCenter = (window.innerWidth - total) / 2 + before + widths[idx] / 2;
+      var delta = window.innerWidth / 2 - slotCenter;
+      shelf.style.transform = 'translateX(' + delta + 'px)';
+    }
+
+    // 收回预览：书架归位，书缩回书脊态
+    function clearPreview() {
+      if (previewSlot) previewSlot.classList.remove('preview');
+      previewSlot = null;
+      shelf.style.transform = '';
+    }
+
+    // 点书架以外的空白处 = 收回预览（阅读视图打开时不管）
+    document.addEventListener('click', function (e) {
+      if (!previewSlot) return;
+      if (reader.classList.contains('open')) return;
+      if (e.target.closest && e.target.closest('.slot')) return;
+      clearPreview();
     });
 
     // ══ 第二部分：阅读视图 ══════════════════════════════════════
@@ -316,12 +380,14 @@
     var currentIndex  = 0;      // 当前看到第几张（等于 length 时是结束卡）
     var activeSlot    = null;   // 书架上被翻开的那本（合上时还原）
 
-    // 翻开一本书：书脊展宽露出封面，其余书淡出，然后淡入阅读视图
+    // 翻开一本书：书脊展宽露出封面，其余书淡出收拢，然后淡入阅读视图
     function openBook(year, slot) {
       currentYear   = year;
       currentPhotos = (allArchive[year] || []).slice();
       currentIndex  = 0;
       activeSlot    = slot;
+      // 若正处于触屏预览态：交还给 flex 居中（其余书收拢后，翻开的书自然居中）
+      clearPreview();
       shelf.classList.add('opening');
       slot.classList.add('active');
       setTimeout(function () {
@@ -332,13 +398,14 @@
       }, 420);
     }
 
-    // 合上书：阅读视图淡出，书架还原
+    // 合上书：阅读视图淡出，书架还原（触屏预览态也一并收回——回书架就是回全景）
     function closeBook() {
       swipeControl.reset();     // 中途关闭也要清场，下次打开才干净
       reader.classList.remove('open');
       shelf.classList.remove('opening');
       if (activeSlot) activeSlot.classList.remove('active');
       activeSlot = null;
+      clearPreview();
       document.body.style.overflow = '';
     }
 
