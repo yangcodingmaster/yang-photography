@@ -248,27 +248,6 @@
     }
     #reader .way-out:hover { color: var(--text); }
 
-    /* ‹ › 左右翻页按钮：与 archive Lightbox 同款（按压态用 opacity，不用 scale） */
-    .pager {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 2;
-      font-size: 1.875rem;
-      line-height: 1;
-      padding: 0.5rem 0.75rem;
-      color: var(--muted);
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-family: inherit;
-      transition: color 0.25s ease;
-    }
-    .pager:hover { color: var(--text); }
-    .pager:active { opacity: 0.4; }
-    #pagerPrev { left: 1.5rem; }
-    #pagerNext { right: 1.5rem; }
-
     /* 结束卡：看完最后一页再 → 进入此卡，再 → 即合上书（与 series/archive 一致） */
     #viewEnd {
       position: absolute;
@@ -331,9 +310,6 @@
   <div id="reader">
     <div class="book-title" id="readerTitle"></div>
     <button class="way-out" id="readerExit">&rarr; Way out</button>
-    <!-- 左右翻页按钮：走和键盘/点击相同的翻页管路 -->
-    <button class="pager" id="pagerPrev">&lsaquo;</button>
-    <button class="pager" id="pagerNext">&rsaquo;</button>
     <div class="page-main" id="pageMain">
       <!-- 照片区：占满页脚以上的空间，照片居中 -->
       <div class="page-photo">
@@ -502,10 +478,6 @@
 
     // 结束卡：点击任意处 = 再往后 = 合上书
     viewEnd.addEventListener('click', function () { turnPage(1); });
-
-    // ‹ › 箭头按钮：走和键盘/点击相同的翻页管路
-    document.getElementById('pagerPrev').addEventListener('click', function () { turnPage(-1); });
-    document.getElementById('pagerNext').addEventListener('click', function () { turnPage(1); });
 
     document.getElementById('readerExit').addEventListener('click', closeBook);
 

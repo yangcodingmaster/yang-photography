@@ -158,17 +158,6 @@
       → Way out
     </button>
 
-    <!-- 左右翻页按钮 -->
-    <!-- 注意：按压态用 opacity 而不是 .pressable 的 scale——按钮自带 -translate-y-1/2 定位，scale 会覆盖掉它 -->
-    <button id="lightbox-prev"
-            class="absolute left-6 top-1/2 -translate-y-1/2 text-site-muted hover:text-site-text active:opacity-40 transition-colors text-3xl leading-none px-3 py-2">
-      ‹
-    </button>
-    <button id="lightbox-next"
-            class="absolute right-6 top-1/2 -translate-y-1/2 text-site-muted hover:text-site-text active:opacity-40 transition-colors text-3xl leading-none px-3 py-2">
-      ›
-    </button>
-
     <!-- 图片本体：尺寸规则与 gallery/series 的 Lightbox 一致 -->
     <!-- 桌面端受 80vh 高度约束 + 居中留白（不铺满全屏），手机端可占更大高度 -->
     <img id="lightbox-img" src="" alt="" draggable="false"
@@ -261,11 +250,9 @@
     var lightboxImg   = document.getElementById('lightbox-img');
     var viewEnd       = document.getElementById('view-end');
     var btnClose      = document.getElementById('lightbox-close');
-    var btnPrev       = document.getElementById('lightbox-prev');
-    var btnNext       = document.getElementById('lightbox-next');
 
     // 根据 currentIndex 渲染：0..N-1 显示照片，等于 N（越过最后一张）时显示结束卡
-    // 左右箭头始终保留：结束卡上 ← 退回最后一张，→ 走出展厅（关闭）
+    // 结束卡上 ← 退回最后一张，→ 走出展厅（关闭）
     function updateLightbox() {
       if (currentIndex === currentPhotos.length) {   // 结束卡视图
         lightboxImg.style.display = 'none';
@@ -297,7 +284,7 @@
 
     // ── 手势 + 翻页动画：全部交给 fluid.js 的滑动控制器 ──────────
     // 1:1 跟手拖拽（触摸和鼠标都行）、松手按速度决定翻页或弹回、
-    // 边界橡皮筋、方向感换图动画；‹ › 按钮和键盘也走同一条动画管路
+    // 边界橡皮筋、方向感换图动画；键盘也走同一条动画管路
     var swipeControl = createSwipeControl(lightbox, {
 
       // Lightbox 打开着才接管手势
@@ -323,9 +310,6 @@
     });
 
     btnClose.addEventListener('click', closeLightbox);
-    // ‹ › 按钮翻页：走和手势相同的方向动画
-    btnPrev.addEventListener('click', function() { swipeControl.slide(-1); });
-    btnNext.addEventListener('click', function() { swipeControl.slide(1); });
 
     // 点 Lightbox 背景（不是图片本身）关闭
     // 拖拽松手落在背景上时不算点击（justDragged 是拖拽后的保险）
