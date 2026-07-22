@@ -159,34 +159,54 @@
     }
     #reader.open { opacity: 1; pointer-events: auto; }
 
-    /* 主页：当前照片 + 页码 */
+    /* 主页：照片区（上，弹性）+ 页脚区（下，定高）
+       页脚定高的意义：无论横图竖图，页码永远钉在离底部同一个位置，
+       切换照片时页脚纹丝不动，只有照片在自己的区域里变化。 */
     .page-main {
       flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
     }
-    .page-main img {
-      max-width: 78%;
-      max-height: 74vh;
+    /* 照片区：占满页脚以上的全部空间，照片在其中居中、按剩余空间缩放 */
+    .page-photo {
+      flex: 1;
+      min-height: 0;                      /* 允许 flex 子项收缩，照片才能按区域限高 */
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4.5rem 3rem 0;             /* 顶部让开页头文字 */
+    }
+    .page-photo img {
+      max-width: 100%;
+      max-height: 100%;
       border: 1px solid var(--text);
       transition: opacity 0.28s ease, transform 0.28s ease;
     }
-    /* ── 页脚文字区 ──
-       两行：第一行是自定义文字（note，没写就不显示），第二行是页码。
+    /* ── 页脚文字区（定高，钉在底部） ──
+       从下往上排：页码永远贴着页脚区底边（位置恒定），
+       note 出现在页码上方，出现/消失都不会推动页码。
        ✏️ 自定义文字在 data.js 的 allArchive 里逐张添加 note 字段，
           写法见本文件底部 renderPage() 上方的说明注释。 */
-    .page-main .note {
-      margin-top: 1.4rem;
+    .page-footer {
+      height: 7.2rem;                     /* 定高：页脚区不随内容伸缩 */
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;          /* 内容贴底：页码钉死，note 往上长 */
+      padding-bottom: 2.4rem;
+    }
+    .page-footer .note {
       font-family: "Noto Serif SC", serif;   /* 中文用衬线，与全站一致 */
       font-size: 1rem;
       letter-spacing: 0.08em;
       color: var(--text);
       transition: opacity 0.28s ease;
     }
-    .page-main .note:empty { display: none; }  /* 没写 note 就整行消失，不占位 */
-    .page-main .folio {
+    .page-footer .note:empty { display: none; }  /* 没写 note 就整行消失 */
+    .page-footer .folio {
       margin-top: 0.6rem;
       font-size: 0.9rem;
       letter-spacing: 0.28em;
@@ -247,9 +267,15 @@
     <div class="book-title" id="readerTitle"></div>
     <button class="way-out" id="readerExit">&rarr; Back to shelf</button>
     <div class="page-main" id="pageMain">
-      <img id="pageImg" src="" alt="" />
-      <div class="note" id="pageNote"></div>
-      <div class="folio" id="pageFolio"></div>
+      <!-- 照片区：占满页脚以上的空间，照片居中 -->
+      <div class="page-photo">
+        <img id="pageImg" src="" alt="" />
+      </div>
+      <!-- 页脚区：定高贴底，切换照片时位置恒定 -->
+      <div class="page-footer">
+        <div class="note" id="pageNote"></div>
+        <div class="folio" id="pageFolio"></div>
+      </div>
     </div>
   </div>
 
