@@ -33,50 +33,149 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet" />
 
   <style>
-    /* ── 瀑布流：CSS columns，每张图保持原始比例 ── */
-    .masonry {
-      column-count: 3;
-      column-gap: 1rem;
+    /* ════════════════════════════════════════════════════════
+       书架式 Archive：每年是一本书
+       书脊 = 扁平竖条（宽度 = 照片数量，数据即造型）；
+       hover 展宽露出封面；点击翻开进入逐页阅读视图。
+       颜色一律用 Tailwind 的设计变量（写在元素 class 上），
+       这里只写几何、层叠和过渡——设计系统仍是唯一的颜色来源。
+       ════════════════════════════════════════════════════════ */
+
+    /* ── 书架：一排书站在一条极简搁板线上 ── */
+    #shelf {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 8px;
+      padding-bottom: 14px;
+      transition: opacity 0.4s ease;
     }
-    @media (max-width: 768px) { .masonry { column-count: 2; } }
-    @media (max-width: 480px) { .masonry { column-count: 1; } }
-    .masonry-item {
-      break-inside: avoid;
-      margin-bottom: 1rem;
-      display: block;
-      cursor: pointer;
+    /* 打开某本书时，其余的书淡出并收拢宽度——
+       被翻开的书自动居中，窄屏上书架也不会瞬间超出屏幕 */
+    #shelf.opening .slot:not(.active) {
+      opacity: 0;
+      width: 0;
+      border-color: transparent;
+      pointer-events: none;
     }
 
-    /* ── Lightbox：纯图模式，无侧栏文字 ── */
-    #lightbox {
+    /* ── 书脊（slot）：一个扁平竖条 ──
+       默认宽度 = 厚度（--t，由 JS 按当年照片数写入）；
+       hover / 打开时平面地展宽到封面宽度，邻居被自然挤开。 */
+    .slot {
+      position: relative;
+      width: calc(var(--t) * 1px);
+      height: 360px;
+      overflow: hidden;
+      cursor: pointer;
+      transform-origin: 50% 100%;         /* 按压时以"站在搁板上"的底边为支点 */
+      transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+                  opacity 0.4s ease;
+    }
+    /* hover 展宽只给有光标的设备：触屏上点一下直接翻开，不经过封面预览 */
+    @media (hover: hover) { .slot:hover { width: 250px; } }
+    .slot.active { width: 250px; }
+    /* 极轻的按压态（与 gallery 卡片同款）——有意加的即时反馈，不要"修复"掉 */
+    .slot:active { transform: scale(0.99); }
+
+    /* 书脊态：竖排年份，居中 */
+    .spine-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      writing-mode: vertical-rl;
+      font-size: 1.05rem;
+      font-weight: 500;
+      letter-spacing: 0.5em;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+    @media (hover: hover) { .slot:hover .spine-label { opacity: 0; } }
+    .slot.active .spine-label { opacity: 0; }
+
+    /* 封面态：照片图版 + 年份 + 张数（展宽后浮现）
+       固定为展开宽度，靠 slot 的 overflow:hidden 裁切，展宽过程中排版不跳动 */
+    .cover-view {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 250px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.35s ease 0.1s;
+    }
+    @media (hover: hover) { .slot:hover .cover-view { opacity: 1; } }
+    .slot.active .cover-view { opacity: 1; }
+    .cover-view img {
+      width: calc(100% - 48px);
+      height: 240px;
+      object-fit: cover;
+    }
+
+    /* ════════════════════════════════════════════════════════
+       阅读视图（reader）：翻开书之后，一次一页
+       照片区（上，弹性）+ 页脚区（下，定高）——
+       页码永远钉在离底部同一个位置，不随照片比例移动。
+       ════════════════════════════════════════════════════════ */
+    #reader {
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.25s ease;
+      transition: opacity 0.45s ease;
+      display: flex;
+      flex-direction: column;
       /* 竖向留给浏览器，横向手势由 fluid.js 接管 */
       touch-action: pan-y;
       user-select: none;
       -webkit-user-select: none;
     }
-    #lightbox.active {
-      opacity: 1;
-      pointer-events: auto;
+    #reader.open { opacity: 1; pointer-events: auto; }
+
+    /* 照片区：占满页脚以上的全部空间，照片居中、按剩余空间缩放 */
+    .page-photo {
+      flex: 1;
+      min-height: 0;                      /* 允许 flex 子项收缩，照片才能按区域限高 */
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4.5rem 3rem 0;             /* 顶部让开页头文字 */
     }
-    #lightbox-img {
-      transform: scale(0.97);
-      transition: transform 0.25s ease;
-      /* 抓手光标提示"这是能推动的实物"（现在也支持鼠标拖拽了） */
+    @media (max-width: 640px) { .page-photo { padding: 4rem 1rem 0; } }
+    .page-photo img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      /* 抓手光标提示"这是能推动的实物"（触摸和鼠标拖拽都由 fluid.js 接管） */
       cursor: grab;
     }
-    #lightbox.active #lightbox-img {
-      transform: scale(1);
+
+    /* 页脚区：定高贴底。页码贴底边（位置恒定），note 在其上方浮现/消失 */
+    .page-footer {
+      height: 7.2rem;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 2.4rem;
     }
-    #view-end {
-      cursor: grab;
-    }
-    /* 拖拽进行中（fluid.js 会给 #lightbox 加这个类）：全局变成抓紧光标 */
-    #lightbox.fluid-grabbing, #lightbox.fluid-grabbing * {
+    #page-note:empty { display: none; }   /* 没写 note 就整行消失 */
+
+    /* 结束卡也可拖拽（用力一甩 = 走出展厅） */
+    #view-end { cursor: grab; }
+
+    /* 拖拽进行中（fluid.js 会给 #reader 加这个类）：全局变成抓紧光标 */
+    #reader.fluid-grabbing, #reader.fluid-grabbing * {
       cursor: grabbing !important;
     }
+
     /* 按压态：按下瞬间缩小（无过渡 = 即时反馈），松开 100ms 缓出 */
     .pressable {
       transition: transform 0.1s ease-out;
@@ -85,17 +184,16 @@
       transform: scale(0.97);
       transition: none;
     }
-    /* 系统开了"减弱动态效果"：取消开场缩放，只保留淡入 */
+
+    /* 系统开了"减弱动态效果"：书脊不做展宽动画，直接到位 */
     @media (prefers-reduced-motion: reduce) {
-      #lightbox-img {
-        transform: none !important;
-        transition: none !important;
-      }
+      .slot { transition: opacity 0.4s ease; }
     }
   </style>
 </head>
 
-<body class="bg-site-bg text-site-text font-body antialiased">
+<!-- overflow-x-hidden：书脊展宽/收拢的过渡瞬间可能短暂超出视口宽度，禁止横向滚动条闪现 -->
+<body class="bg-site-bg text-site-text font-body antialiased min-h-screen flex flex-col overflow-x-hidden">
 
   <!-- 导航栏 -->
   <nav class="fixed top-0 w-full z-50 bg-site-bg">
@@ -114,57 +212,50 @@
   <div class="h-16"></div>
 
 
-  <!-- 页面标题 + 年份导航 -->
-  <header class="max-w-6xl mx-auto px-6 pt-16 pb-8">
+  <!-- 页面标题 -->
+  <header class="max-w-6xl mx-auto px-6 pt-16 pb-8 w-full">
     <h1>
       <span class="block font-display text-4xl tracking-tight">Archive</span>
       <span class="block font-zh text-sm text-site-muted mt-2">散片档案</span>
     </h1>
-
-    <!-- 年份小导航：点击切换年份；当前年份用深色，其余浅色 -->
-    <nav id="year-nav" class="mt-8 flex flex-wrap gap-6 text-sm">
-      <!-- 由 JS 根据 allArchive 的 keys 生成 -->
-    </nav>
 
     <!-- 短分割线：左对齐、不横跨全宽，与标题左缘呼应 -->
     <div class="mt-8 h-px w-20 bg-site-border"></div>
   </header>
 
 
-  <!-- 瀑布流照片区 -->
-  <main class="max-w-6xl mx-auto px-6 py-12">
-    <!-- 空状态提示（当某年没有照片时显示） -->
-    <p id="empty-hint" class="hidden text-sm text-site-muted text-center py-20">
-      这一年还没有照片 / No photos yet
-    </p>
-    <div id="masonry" class="masonry"></div>
-
-    <!-- 短分割线：居中、不横跨全宽，与底部居中导航呼应 -->
-    <div class="mt-16 mx-auto h-px w-20 bg-site-border"></div>
-
-    <!-- 底部年份导航：看完一年滑到底，在这里直接切换下一年（镜像顶部导航） -->
-    <nav id="year-nav-bottom" class="mt-8 flex flex-wrap justify-center gap-6 text-sm">
-      <!-- 由 JS 渲染，内容与顶部年份导航一致 -->
-    </nav>
+  <!-- 书架：每年一本书，由 JS 根据 allArchive 生成 -->
+  <main class="flex-1 flex items-center justify-center px-6 pb-16">
+    <div id="shelf" class="border-b border-site-border"></div>
   </main>
 
 
-  <!-- Lightbox：纯图模式 -->
-  <!-- 背景纯不透明纸面（不加模糊），与 gallery/series 的 Lightbox 一致，不抢照片注意力 -->
-  <div id="lightbox" class="fixed inset-0 z-[100] bg-site-bg flex items-center justify-center p-6">
-    <!-- 出口（右上角）：与 gallery/series 一致的"展览出口"指示牌，首字母大写 + → 前缀 -->
-    <button id="lightbox-close"
-            class="pressable absolute top-6 right-8 text-xs text-site-muted hover:text-site-text transition-colors tracking-widest">
+  <!-- 阅读视图：翻开书之后，一次一页 -->
+  <!-- 背景纯不透明纸面（不加模糊），与 gallery/series 的 Lightbox 一致 -->
+  <div id="reader" class="fixed inset-0 z-[100] bg-site-bg">
+
+    <!-- 左上角：这本书是哪一年（结束卡视图里清空） -->
+    <div id="reader-title" class="absolute top-6 left-8 text-sm text-site-muted font-display tracking-widest z-10"></div>
+
+    <!-- 出口（右上角）：与 gallery/series 一致的"展览出口"指示牌 -->
+    <button id="reader-close"
+            class="pressable absolute top-6 right-8 text-xs text-site-muted hover:text-site-text transition-colors tracking-widest z-10">
       → Way out
     </button>
 
-    <!-- 图片本体：尺寸规则与 gallery/series 的 Lightbox 一致 -->
-    <!-- 桌面端受 80vh 高度约束 + 居中留白（不铺满全屏），手机端可占更大高度 -->
-    <img id="lightbox-img" src="" alt="" draggable="false"
-         class="max-h-[85vh] max-w-[90vw] md:max-h-[80vh] md:max-w-4xl object-contain" />
+    <!-- 照片区 + 定高页脚（页码位置不随照片比例移动） -->
+    <div class="page-photo" id="page-photo">
+      <img id="page-img" src="" alt="" draggable="false" class="border border-site-text" />
+    </div>
+    <div class="page-footer">
+      <!-- 自定义文字（data.js 里逐张加 note 字段，没写就整行消失） -->
+      <div id="page-note"  class="font-zh text-base text-site-text tracking-wide"></div>
+      <!-- 页码：只报"第几页 / 共几页"，年份由左上角负责 -->
+      <div id="page-folio" class="mt-2 text-sm text-site-muted tracking-widest"></div>
+    </div>
 
-    <!-- 结束卡：看完最后一张再 → 进入此卡，再 → 即走出展厅（关闭），与 series.html 一致 -->
-    <div id="view-end" class="flex-col items-center justify-center text-center px-12 max-w-lg" style="display:none">
+    <!-- 结束卡：看完最后一页再 → 进入此卡，再 → 即合上书，与 series.html 一致 -->
+    <div id="view-end" class="absolute inset-0 flex-col items-center justify-center text-center px-12 mx-auto max-w-lg" style="display:none">
       <h2 class="font-zh text-4xl font-light mb-4">游览到此结束</h2>
       <p class="font-display text-site-muted text-lg">Your visit is over</p>
       <p class="mt-16 text-xs text-site-muted opacity-30 tracking-widest">→ Way out</p>
@@ -175,165 +266,162 @@
   <script src="data.js"></script>
   <script src="fluid.js"></script>
   <script>
-    // ── 取出所有年份，按降序（最新在前） ────────────────────────
-    var years = Object.keys(allArchive || {}).sort(function(a, b) {
-      return b.localeCompare(a);
+    // ── 取出所有年份，按升序（书架从左到右按时间排：2021 → 2025） ──
+    var years = Object.keys(allArchive || {}).sort();
+
+    // ══ 第一部分：书架 ══════════════════════════════════════════
+
+    var shelf = document.getElementById('shelf');
+
+    years.forEach(function (year) {
+      var photos = allArchive[year];
+      // 书脊宽度：底宽 16px + 每张照片 1.6px（数据即造型：一眼看出哪年拍得多）
+      var thickness = Math.round(16 + photos.length * 1.6);
+      var cover = photos.length ? photos[0].src : '';   // 封面图 = 当年数组第一张
+
+      var slot = document.createElement('div');
+      slot.className = 'slot bg-site-surface border border-site-border';
+      slot.style.setProperty('--t', thickness);
+
+      slot.innerHTML =
+        // 书脊态：竖排年份
+        '<div class="spine-label font-display text-site-text">' + year + '</div>' +
+        // 封面态：照片图版（与全站同款 1px 描边）+ 年份 + 张数
+        '<div class="cover-view">' +
+          (cover ? '<img src="' + cover + '" alt="' + year + ' 封面" loading="lazy" class="border border-site-text" />' : '') +
+          '<div class="font-display text-2xl tracking-widest mt-4 text-site-text">' + year + '</div>' +
+          '<div class="text-xs tracking-widest text-site-muted mt-1">' + photos.length + ' PHOTOS</div>' +
+        '</div>';
+
+      // 点击 = 翻开这本书
+      slot.addEventListener('click', function () { openBook(year, slot); });
+
+      fluidReveal(slot);   // 滚动浮现：书架第一次进入视野时轻轻浮上来（自左而右错开）
+      shelf.appendChild(slot);
     });
 
-    // ── 当前显示的年份（默认最新） ────────────────────────────
-    var currentYear = years[0] || null;
+    // ══ 第二部分：阅读视图 ══════════════════════════════════════
 
-    // ── 渲染年份小导航 ────────────────────────────────────────
-    // 顶部和底部各有一个容器，内容完全一致：看完一年滑到底，底部也能直接切换
-    var yearNav       = document.getElementById('year-nav');
-    var yearNavBottom = document.getElementById('year-nav-bottom');
+    var reader      = document.getElementById('reader');
+    var readerTitle = document.getElementById('reader-title');
+    var btnClose    = document.getElementById('reader-close');
+    var photoArea   = document.getElementById('page-photo');
+    var pageImg     = document.getElementById('page-img');
+    var pageNote    = document.getElementById('page-note');
+    var pageFolio   = document.getElementById('page-folio');
+    var viewEnd     = document.getElementById('view-end');
 
-    // 往指定容器里填一组年份按钮（顶部、底部复用同一份逻辑）
-    function fillYearNav(container) {
-      container.innerHTML = '';
-      years.forEach(function(y) {
-        var btn = document.createElement('button');
-        btn.textContent = y;
-        // 当前年份用深色，其余用浅色；都带按压态（按下瞬间反馈）
-        btn.className = (y === currentYear)
-          ? 'pressable text-site-text font-display tracking-wide'
-          : 'pressable text-site-muted hover:text-site-text transition-colors font-display tracking-wide';
-        btn.addEventListener('click', function() {
-          currentYear = y;
-          renderYearNav();
-          renderMasonry();
-          // 从底部切换年份后，回到顶部重新开始看这一年
-          // （系统开了"减弱动态"就直接跳，不做平滑滚动）
-          window.scrollTo({ top: 0, behavior: fluidReducedMotion() ? 'auto' : 'smooth' });
-        });
-        container.appendChild(btn);
-      });
+    var currentYear   = null;   // 当前翻开的是哪一年
+    var currentPhotos = [];     // 这本书的照片列表
+    var currentIndex  = 0;      // 当前看到第几张（等于 length 时是结束卡）
+    var activeSlot    = null;   // 书架上被翻开的那本（合上时还原）
+
+    // 翻开一本书：书脊展宽露出封面，其余书淡出，然后淡入阅读视图
+    function openBook(year, slot) {
+      currentYear   = year;
+      currentPhotos = (allArchive[year] || []).slice();
+      currentIndex  = 0;
+      activeSlot    = slot;
+      shelf.classList.add('opening');
+      slot.classList.add('active');
+      setTimeout(function () {
+        swipeControl.reset();   // 清掉上一次遗留的位移/透明度
+        updateReader();
+        reader.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }, 420);
     }
 
-    function renderYearNav() {
-      fillYearNav(yearNav);
-      fillYearNav(yearNavBottom);
+    // 合上书：阅读视图淡出，书架还原
+    function closeBook() {
+      swipeControl.reset();     // 中途关闭也要清场，下次打开才干净
+      reader.classList.remove('open');
+      shelf.classList.remove('opening');
+      if (activeSlot) activeSlot.classList.remove('active');
+      activeSlot = null;
+      document.body.style.overflow = '';
     }
 
-    // ── 渲染当前年份的瀑布流 ──────────────────────────────────
-    var masonry   = document.getElementById('masonry');
-    var emptyHint = document.getElementById('empty-hint');
+    // ✏️═══════════════ 页脚文字怎么自定义（给作者看） ═══════════════
+    // 每张照片下面可以写一行自己的话（note 字段），显示在照片和页码之间。
+    // 修改位置：data.js → allArchive → 对应年份的数组里，给那张照片加一行 note：
+    //
+    //   { src: 'assets/images/archive/2023/1.jpeg', alt: '', note: '多佛白崖下的海湾' },
+    //
+    // 不写 note 就只显示页码，不占位。改完硬刷新（Cmd+Shift+R）即可。
+    // ═══════════════════════════════════════════════════════════════
 
-    // 当前显示的照片列表（用于 Lightbox 翻页）
-    var currentPhotos = [];
-    var currentIndex  = 0;
-
-    function renderMasonry() {
-      masonry.innerHTML = '';
-      currentPhotos = (allArchive[currentYear] || []).slice();
-
-      if (currentPhotos.length === 0) {
-        emptyHint.classList.remove('hidden');
+    // 根据 currentIndex 渲染当前页：0..N-1 是照片页，等于 N 时是结束卡
+    function updateReader() {
+      if (currentIndex === currentPhotos.length) {   // ── 结束卡视图 ──
+        photoArea.style.display = 'none';
+        pageNote.textContent  = '';
+        pageFolio.textContent = '';
+        viewEnd.style.display = 'flex';
+        readerTitle.textContent = '';                // 结束卡里清空年份（与 series 规矩一致）
         return;
       }
-      emptyHint.classList.add('hidden');
-
-      currentPhotos.forEach(function(photo, i) {
-        var img = document.createElement('img');
-        img.src       = photo.src;
-        img.alt       = photo.alt || '';
-        img.loading   = 'lazy';
-        img.className = 'masonry-item w-full';
-        img.addEventListener('click', function() { openLightbox(i); });
-        fluidReveal(img);   // 滚动浮现：第一次进入视野时从下方轻轻浮上来
-        masonry.appendChild(img);
-      });
-    }
-
-    // ── Lightbox 控制 ────────────────────────────────────────
-    var lightbox      = document.getElementById('lightbox');
-    var lightboxImg   = document.getElementById('lightbox-img');
-    var viewEnd       = document.getElementById('view-end');
-    var btnClose      = document.getElementById('lightbox-close');
-
-    // 根据 currentIndex 渲染：0..N-1 显示照片，等于 N（越过最后一张）时显示结束卡
-    // 结束卡上 ← 退回最后一张，→ 走出展厅（关闭）
-    function updateLightbox() {
-      if (currentIndex === currentPhotos.length) {   // 结束卡视图
-        lightboxImg.style.display = 'none';
-        viewEnd.style.display     = 'flex';
-        return;
-      }
-      // 照片视图
+      // ── 照片页 ──
       var p = currentPhotos[currentIndex];
       if (!p) return;
-      viewEnd.style.display     = 'none';
-      lightboxImg.style.display = '';
-      lightboxImg.src = p.src;
-      lightboxImg.alt = p.alt || '';
-    }
-
-    function openLightbox(index) {
-      currentIndex = index;
-      swipeControl.reset();     // 清掉上一次遗留的位移/透明度
-      updateLightbox();
-      lightbox.classList.add('active');
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeLightbox() {
-      swipeControl.reset();     // 中途关闭也要清场，下次打开才干净
-      lightbox.classList.remove('active');
-      document.body.style.overflow = '';
+      viewEnd.style.display   = 'none';
+      photoArea.style.display = '';
+      pageImg.src = p.src;
+      pageImg.alt = p.alt || (currentYear + ' 散片');
+      pageNote.textContent  = p.note || '';
+      pageFolio.textContent = (currentIndex + 1) + ' / ' + currentPhotos.length;
+      readerTitle.textContent = currentYear;
     }
 
     // ── 手势 + 翻页动画：全部交给 fluid.js 的滑动控制器 ──────────
     // 1:1 跟手拖拽（触摸和鼠标都行）、松手按速度决定翻页或弹回、
     // 边界橡皮筋、方向感换图动画；键盘也走同一条动画管路
-    var swipeControl = createSwipeControl(lightbox, {
+    var swipeControl = createSwipeControl(reader, {
 
-      // Lightbox 打开着才接管手势
-      isActive: function() { return lightbox.classList.contains('active'); },
+      // 阅读视图打开着才接管手势
+      isActive: function() { return reader.classList.contains('open'); },
 
       // 当前应该跟手移动的视图：照片本体，或结束卡
       getView: function() {
-        return currentIndex === currentPhotos.length ? viewEnd : lightboxImg;
+        return currentIndex === currentPhotos.length ? viewEnd : pageImg;
       },
 
-      // 边界：第一张不能再往回；结束卡不能再往前（往前 = 走出展厅）
+      // 边界：第一页不能再往回；结束卡不能再往前（往前 = 合上书）
       canPrev: function() { return currentIndex > 0; },
       canNext: function() { return currentIndex < currentPhotos.length; },
 
       // 真正换内容：改索引 + 重新渲染（控制器保证不会越界调用）
       swap: function(direction) {
         currentIndex += direction;
-        updateLightbox();
+        updateReader();
       },
 
-      // 走出展厅：结束卡上用力一甩，或按钮/键盘/滑动再往前
-      flickClose: closeLightbox,
+      // 合上书：结束卡上用力一甩，或键盘/滑动再往前
+      flickClose: closeBook,
     });
 
-    btnClose.addEventListener('click', closeLightbox);
+    btnClose.addEventListener('click', closeBook);
 
-    // 点 Lightbox 背景（不是图片本身）关闭
-    // 拖拽松手落在背景上时不算点击（justDragged 是拖拽后的保险）
-    lightbox.addEventListener('click', function(e) {
+    // 照片区点击翻页：左半边往回、右半边往后（拖拽松手不算点击）
+    photoArea.addEventListener('click', function (e) {
       if (swipeControl.justDragged()) return;
-      if (e.target === lightbox) closeLightbox();
+      var rect = photoArea.getBoundingClientRect();
+      swipeControl.slide((e.clientX - rect.left) < rect.width / 2 ? -1 : 1);
     });
 
-    // 键盘：Esc 关闭，← → 翻页（同一条动画管路）
+    // 结束卡点击 = 再往后 = 合上书
+    viewEnd.addEventListener('click', function () {
+      if (swipeControl.justDragged()) return;
+      swipeControl.slide(1);
+    });
+
+    // 键盘：Esc 合上书，← → 翻页（同一条动画管路）
     document.addEventListener('keydown', function(e) {
-      if (!lightbox.classList.contains('active')) return;
-      if (e.key === 'Escape')     closeLightbox();
+      if (!reader.classList.contains('open')) return;
+      if (e.key === 'Escape')     closeBook();
       if (e.key === 'ArrowLeft')  swipeControl.slide(-1);
       if (e.key === 'ArrowRight') swipeControl.slide(1);
     });
-
-    // ── 初始渲染 ─────────────────────────────────────────────
-    if (currentYear) {
-      renderYearNav();
-      renderMasonry();
-    } else {
-      // 完全没有年份时显示提示
-      emptyHint.classList.remove('hidden');
-    }
   </script>
 
 </body>
