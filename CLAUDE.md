@@ -28,11 +28,11 @@
 | `index.html` 首页 | ✅ 完成 | 明信片式：暖白纸面 + 居中单张照片轮播（淡入淡出）+ 极简导航 |
 | `gallery.html` 作品集 | ✅ 完成 | 系列网格，封面图 + 标题 + 年份地点 |
 | `series.html` 系列详情 | ✅ 完成 | 瀑布流网格 + 展览级 Lightbox + 分章支持 + 组图支持 |
-| `archive.html` Archive | ✅ 完成 | 散片档案，按年份切换 + 瀑布流 + 纯图 Lightbox（无文字字段） |
+| `archive.html` Archive | ✅ 完成 | 书架式：每年一本书（书脊宽度=照片数），翻开逐页阅读（`book-style` 分支重构） |
 | `about.html` 关于页 | ✅ 完成 | 结构完成，文案为占位内容待替换 |
 | `data.js` 数据文件 | ✅ 完成 | Gallery 8 个系列（含 allSeries / allPhotos / allChapters）+ Archive 5 年（allArchive） |
 | Gallery 系列 | ✅ 上线 | 见下方"Gallery 系列清单"，共 8 个，约 200 张照片 |
-| Archive 散片 | ✅ 上线 | 2021–2025 五年，共 123 张（纯图，无文字字段） |
+| Archive 散片 | ✅ 上线 | 2021–2025 五年，共 123 张（可选 note 一句话页脚，作者逐张手填） |
 | 图片压缩 | ✅ 完成 | 全部转为网页尺寸（HEIC→JPEG，长边 2560 / 质量 90） |
 | 路径空格清理 | ✅ 完成 | 全部重命名为连字符形式，可直接部署 |
 | GitHub 仓库 + Pages | ✅ 上线 | `yangcodingmaster/yang-photography`，Pages 已 built |
@@ -63,12 +63,12 @@
 ├── index.html              # 首页：明信片式 + 居中单张照片轮播
 ├── gallery.html            # 作品集：系列列表（每格是一个系列/文件夹）
 ├── series.html             # 系列详情页（通用，?id= 参数决定显示哪个系列）
-├── archive.html            # Archive：散片档案，按年份切换 + 瀑布流
+├── archive.html            # Archive：书架式散片档案，每年一本书 + 翻开逐页阅读
 ├── about.html              # 关于页：个人介绍 + 联系方式
 │
 ├── data.js                 # ⭐ 唯一的数据文件，所有内容只改这里
 │                           #    包含：allSeries、allPhotos、allChapters、allArchive
-├── fluid.js                # 弹簧动画 + 滑动手势引擎（零依赖手写，series/archive 两个 Lightbox 共用）
+├── fluid.js                # 弹簧动画 + 滑动手势引擎（零依赖手写，series Lightbox 与 archive 阅读视图共用）
 │
 ├── assets/
 │   └── images/
@@ -144,22 +144,28 @@
 - **组图**（`group` 类型）：Lightbox 内纵向堆叠 2–5 张照片，右侧共享一组文字说明
 - 四种 Lightbox 视图：`view-photo`（单张）、`view-group`（组图）、`view-chapter`（章节卡）、`view-end`（结束卡）
 
-### Archive 页 `archive.html`
+### Archive 页 `archive.html`（书架式，`book-style` 分支重构）
 - 散片档案，和 Gallery 平级（不是子集）。所有"不成系列"的照片放这里
 - 数据来自 `data.js` 的 `allArchive`，按年份组织（key 是年份字符串）
 - 头部：英文大标题 `Archive` + 中文小灰 `散片档案`，下方左对齐短分割线（与 Gallery 同构）
-- **年份导航有两处、内容一致**（`fillYearNav(container)` 复用同一份逻辑）：
-  - 顶部年份小导航：点击切换年份，一次只显示一年，默认进入最新年份
-  - **底部年份导航**（镜像，居中）：看完一年滑到底可直接切换，切换后平滑滚回顶部
-- 瀑布流布局（CSS columns，3 列；中屏 2 列；窄屏 1 列），保持照片原始比例
-- 照片有 1px 黑色描边（和首页一致）
-- 点击照片打开**纯图 Lightbox**：没有右侧文字面板，因为 Archive 故意不要任何字段
+- **书架**：每年是一本书，从左到右按时间排（2021 → 2025），站在一条搁板细线上
+  - 书脊 = 扁平竖条（`site-surface` 底 + `site-border` 边框），竖排年份
+  - **书脊宽度 = 16px + 照片数 × 1.6px**（数据即造型：一眼看出哪年拍得多）
+  - hover 展宽露出封面（照片图版 + 年份 + 张数）——只在有光标的设备上（`@media (hover: hover)`）
+  - **触屏两步交互**：第一次点书脊 = 书架平移把这本书**推到屏幕中心**展开预览（其余书挤向两边、
+    超出屏幕部分裁掉），再点封面才翻开；点其他书脊切换预览、点空白收回、Way out 回来自动收回。
+    桌面不做居中位移（书架一动光标底下就换书，会抖），两端交互不同、各自最优
+  - 书脊有极轻按压态（scale 0.99，支点在底边）；打开某本时其余书淡出并收拢宽度
+  - 书架入场有滚动浮现（`fluidReveal`，自左而右错开）
+- 点击书 = **翻开进入阅读视图**（一次一整页，替代旧瀑布流 + Lightbox）：
   - 背景纯不透明纸面（`bg-site-bg`，**不加模糊**），与 gallery/series 一致
-  - 右上角出口 `→ Way out`（不是 ×），与 series.html 统一
-  - **不循环**：到末尾再 → 进入结束卡 `view-end`（游览到此结束 / Your visit is over），结束卡再 → 关闭；第一张往 ← 停住
-  - 键盘 ← → 翻页、Esc 退出；`‹ ›` 箭头按钮走和手势相同的方向动画
-  - **流体手势**（fluid.js）：与 series.html 完全一致的 1:1 跟手拖拽 + 橡皮筋 + 惯性决策（现在也支持鼠标拖拽）
-- 年份内顺序 = 数组顺序：把新照片放数组前面 = 最新在最上面
+  - 版式：照片区（弹性，居中）+ **定高页脚贴底**——页码位置不随照片横竖比例移动
+  - 页脚两行：可选 **note**（作者写的一句话，`font-zh`）+ 页码 `n / N`（年份由左上角常驻标示，页码不重复报年份）
+  - 右上角出口 `→ Way out`，与 series.html 统一；**无箭头按钮、无操作提示文字**（全站约定：操作靠直觉）
+  - **不循环**：最后一页再 → 进入结束卡 `view-end`（游览到此结束 / Your visit is over），结束卡再 → 合上书回书架；第一页往 ← 停住；结束卡视图里左上角年份清空
+  - 键盘 ← → 翻页、Esc 合上；照片区点击左半边往回/右半边往后
+  - **流体手势**（fluid.js）：与 series.html 完全一致的 1:1 跟手拖拽 + 橡皮筋 + 惯性决策；结束卡上用力一甩 = 合上书
+- 年份内顺序 = 数组顺序：把新照片放数组前面 = 最新在最前面；封面图 = 当年数组第一张
 
 ### 关于页 `about.html`
 - 左侧个人照片（`assets/images/profile.jpg`），右侧双语介绍
@@ -228,8 +234,10 @@ allChapters['photos-of-2025'] = [
 ```javascript
 var allArchive = {
   '2025': [
-    // 数组顺序就是显示顺序，新照片放前面 = 最新在最上面
+    // 数组顺序就是显示顺序，新照片放前面 = 最新在最前面（也是这本书的封面）
     { src: 'assets/images/archive/2025/任意命名.jpg', alt: '' },
+    // 可选：note 一句话页脚，显示在阅读视图照片和页码之间；不写就只显示页码
+    { src: 'assets/images/archive/2025/xxx.jpg', alt: '', note: '多佛白崖下的海湾' },
   ],
   '2024': [
     { src: 'assets/images/archive/2024/xxx.jpg', alt: '' },
@@ -237,9 +245,10 @@ var allArchive = {
 };
 ```
 
-**关键约束：Archive 只放 src 和 alt，不要任何其他字段。** 这是有意为之 ——
+**关键约束：Archive 只放 src、alt 和可选的 note，不要其他字段。**
 Archive 故意没有 caption / date / location / desc / meta，因为它的定位就是"只放照片"。
-要给照片配文字，那它应该进 Gallery 而不是 Archive。
+note 是书架式改版后唯一的例外：一本书翻到某页时，页脚可以有作者的一句话（不是正经作品文案）。
+要给照片配完整文字（标题/日期/地点/器材），那它应该进 Gallery 而不是 Archive。
 
 ### 组图写法（group）
 
@@ -303,8 +312,9 @@ Archive 故意没有 caption / date / location / desc / meta，因为它的定�
 1. 把照片放进 `assets/images/archive/YYYY/`（年份是哪年就放哪年的文件夹）
 2. 文件名随意（Archive 不依赖文件名顺序，靠数组顺序决定显示顺序）
 3. 在 `data.js` 的 `allArchive['YYYY']` 数组**最前面**加一行 `{ src: 'assets/images/archive/YYYY/xxx.jpg', alt: '' }`
-4. 想加新一年（如 2026）：在 `allArchive` 里加 `'2026': []`，年份导航会自动出现
-5. 刷新 `archive.html`，最新照片会出现在最上面
+   （放最前面 = 它成为这本书的封面和第一页；想配一句话页脚就再加 `note: '…'` 字段）
+4. 想加新一年（如 2026）：在 `allArchive` 里加 `'2026': []`，书架上会自动多一本书（书脊宽度随照片数长粗）
+5. 刷新 `archive.html`（浏览器缓存 data.js 时用 Cmd+Shift+R 硬刷新）
 
 ### 支持的图片格式与压缩标准
 
@@ -375,7 +385,7 @@ Archive 故意没有 caption / date / location / desc / meta，因为它的定�
   1:1 跟手、松手决策、两段式换图动画（滑出渐隐 → swap → 反向滑入渐显）、拖拽后吞 click 防误触
 - **手感参数**都在 `createSwipeControl` 顶部（HYSTERESIS/COMMIT_DIST/OUT_DIST/IN_DIST/FLICK_CLOSE），改前三思
 - **`fluidReveal(el)`** — 滚动浮现：元素第一次进入视野且图片解码完成后，从下方 14px 轻轻浮上来（450ms 无回弹）。
-  gallery 卡片 / series 网格项 / archive 瀑布流都在创建元素时调用它；同批进入视野的按屏幕位置自上而下错开 50ms；
+  gallery 卡片 / series 网格项 / archive 书架的书脊都在创建元素时调用它；同批进入视野的按屏幕位置错开 50ms；
   每张只浮现一次；切换 Archive 年份重新渲染 = 重新浮现（有意的）
 - **减弱动态**：`fluidReducedMotion()` 每次现查系统设置，开了就只做淡入淡出、不做位移（浮现也一样：只淡入不上浮）
 
