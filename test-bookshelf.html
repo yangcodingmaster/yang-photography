@@ -48,6 +48,13 @@
       color: var(--muted);
       margin-top: 0.25rem;
     }
+    /* 页头下方的左对齐短分割线（与 gallery/archive 页头同构：w-20 不横跨全宽） */
+    .header-line {
+      margin-top: 2rem;
+      width: 5rem;
+      height: 1px;
+      background: var(--border);
+    }
 
     /* ── 书架区：占满剩余高度，书居中 ── */
     .stage {
@@ -82,9 +89,13 @@
       border: 1px solid var(--border);
       overflow: hidden;
       cursor: pointer;
+      transform-origin: 50% 100%;         /* 按压时以"站在搁板上"的底边为支点 */
       transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
                   opacity 0.4s ease;
     }
+    /* 极轻的按压态（与 gallery 卡片同款：按下瞬间 0.99、松开缓出）——有意加的即时反馈 */
+    .slot:active { transform: scale(0.99); }
     .slot:hover, .slot.active { width: var(--bw); }
 
     /* ── 书脊态：竖排年份，居中 ── */
@@ -220,14 +231,14 @@
     .page-main.turn-next .note,  .page-main.turn-prev .note,
     .page-main.turn-next .folio, .page-main.turn-prev .folio { opacity: 0; }
 
-    /* 出口（与全站 Way out 同构） */
+    /* 出口（右上角）：与 gallery/series/archive 完全一致的"展览出口"指示牌 */
     #reader .way-out {
       position: absolute;
-      top: 1.6rem;
+      top: 1.5rem;
       right: 2rem;
       z-index: 2;
-      font-size: 1.05rem;
-      letter-spacing: 0.06em;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
       color: var(--muted);
       cursor: pointer;
       background: none;
@@ -236,6 +247,59 @@
       transition: color 0.25s ease;
     }
     #reader .way-out:hover { color: var(--text); }
+
+    /* ‹ › 左右翻页按钮：与 archive Lightbox 同款（按压态用 opacity，不用 scale） */
+    .pager {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 2;
+      font-size: 1.875rem;
+      line-height: 1;
+      padding: 0.5rem 0.75rem;
+      color: var(--muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      transition: color 0.25s ease;
+    }
+    .pager:hover { color: var(--text); }
+    .pager:active { opacity: 0.4; }
+    #pagerPrev { left: 1.5rem; }
+    #pagerNext { right: 1.5rem; }
+
+    /* 结束卡：看完最后一页再 → 进入此卡，再 → 即合上书（与 series/archive 一致） */
+    #viewEnd {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.28s ease;
+      cursor: pointer;
+    }
+    #viewEnd.on { opacity: 1; }
+    #viewEnd h2 {
+      font-family: "Noto Serif SC", serif;
+      font-size: 2.25rem;
+      font-weight: 300;
+      margin-bottom: 1rem;
+    }
+    #viewEnd .en {
+      font-size: 1.125rem;
+      color: var(--muted);
+    }
+    #viewEnd .hint {
+      margin-top: 4rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      opacity: 0.3;
+    }
 
     /* 左上角：这本书是哪一年 */
     #reader .book-title {
@@ -255,6 +319,7 @@
   <header>
     <h1>Archive</h1>
     <p>散片档案 · 书架原型 · 扁平版（test）</p>
+    <div class="header-line"></div>
   </header>
 
   <!-- 书架 -->
@@ -265,7 +330,10 @@
   <!-- 阅读视图：翻开书之后 -->
   <div id="reader">
     <div class="book-title" id="readerTitle"></div>
-    <button class="way-out" id="readerExit">&rarr; Back to shelf</button>
+    <button class="way-out" id="readerExit">&rarr; Way out</button>
+    <!-- 左右翻页按钮：走和键盘/点击相同的翻页管路 -->
+    <button class="pager" id="pagerPrev">&lsaquo;</button>
+    <button class="pager" id="pagerNext">&rsaquo;</button>
     <div class="page-main" id="pageMain">
       <!-- 照片区：占满页脚以上的空间，照片居中 -->
       <div class="page-photo">
@@ -276,6 +344,12 @@
         <div class="note" id="pageNote"></div>
         <div class="folio" id="pageFolio"></div>
       </div>
+    </div>
+    <!-- 结束卡：合上书前的最后一页（与 series/archive 的仪式一致） -->
+    <div id="viewEnd">
+      <h2>游览到此结束</h2>
+      <p class="en">Your visit is over</p>
+      <p class="hint">&rarr; Way out</p>
     </div>
   </div>
 
@@ -320,6 +394,7 @@
     var pageImg     = document.getElementById('pageImg');
     var pageNote    = document.getElementById('pageNote');
     var pageFolio   = document.getElementById('pageFolio');
+    var viewEnd     = document.getElementById('viewEnd');
 
     var currentYear   = null;   // 当前翻开的是哪一年
     var currentIndex  = 0;      // 当前看到第几张
@@ -369,9 +444,25 @@
     // ═══════════════════════════════════════════════════════════════
 
     // 渲染当前页：照片 + 自定义文字（note）+ 页码
+    // currentIndex === photos.length 时是"结束卡"视图（合上书前的最后一页）
     function renderPage() {
       var photos = allArchive[currentYear];
-      var photo  = photos[currentIndex];
+
+      // ── 结束卡视图 ──
+      if (currentIndex === photos.length) {
+        pageMain.style.display = 'none';         // JS 动态控制 display，规范允许
+        viewEnd.style.display = 'flex';
+        void viewEnd.offsetWidth;                // 强制重排，让下面的淡入过渡生效
+        viewEnd.classList.add('on');
+        readerTitle.textContent = '';            // 结束卡里清空左上角年份（与 series 规矩一致）
+        return;
+      }
+
+      // ── 普通照片页 ──
+      pageMain.style.display = '';
+      viewEnd.style.display = 'none';
+      viewEnd.classList.remove('on');
+      var photo = photos[currentIndex];
       pageImg.src = photo.src;
       pageImg.alt = photo.alt || (currentYear + ' 散片');
       pageNote.textContent = photo.note || '';   // 没写 note 就是空，CSS 会把整行隐藏
@@ -381,14 +472,20 @@
     }
 
     // 翻页：dir = +1 往后 / -1 往回。旧页滑出渐隐 → 换内容 → 新页滑入
+    // 不循环：最后一页再 → 进结束卡；结束卡再 → 合上书；第一页往 ← 停住
     function turnPage(dir) {
       if (turning || !currentYear) return;
       var photos = allArchive[currentYear];
+
+      // 在结束卡上再往后翻 = 合上书（走出这本书）
+      if (currentIndex === photos.length && dir > 0) { closeBook(); return; }
+
       var target = currentIndex + dir;
-      if (target < 0 || target >= photos.length) return;   // 到头停住（不循环）
+      if (target < 0 || target > photos.length) return;   // 越界停住（length 是结束卡）
 
       turning = true;
       pageMain.classList.add(dir > 0 ? 'turn-next' : 'turn-prev');
+      viewEnd.classList.remove('on');                     // 若正离开结束卡，让它淡出
       setTimeout(function () {
         currentIndex = target;
         renderPage();
@@ -402,6 +499,13 @@
       var mid = pageMain.getBoundingClientRect().width / 2;
       turnPage(e.clientX < mid ? -1 : 1);
     });
+
+    // 结束卡：点击任意处 = 再往后 = 合上书
+    viewEnd.addEventListener('click', function () { turnPage(1); });
+
+    // ‹ › 箭头按钮：走和键盘/点击相同的翻页管路
+    document.getElementById('pagerPrev').addEventListener('click', function () { turnPage(-1); });
+    document.getElementById('pagerNext').addEventListener('click', function () { turnPage(1); });
 
     document.getElementById('readerExit').addEventListener('click', closeBook);
 
