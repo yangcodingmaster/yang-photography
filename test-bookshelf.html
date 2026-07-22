@@ -5,26 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bookshelf Test — Archive</title>
 
-  <!-- ⚠️ 这是一个一次性原型页（test），用于验证"书架式 Archive"的视觉与交互。
-       确认方向后会把这套东西正式移植进 archive.html，届时删除本文件。 -->
+  <!-- ⚠️ 一次性原型页（test）：书架式 Archive 的【扁平版】。
+       设计原则：留下书的骨架（书脊排 / 厚度=照片数 / 翻开读页），脱掉书的戏服
+       （无 3D、无布纹、无烫金、无阴影），全部用全站已有的印刷品语言来画。
+       拟物对照版在 test-bookshelf-3d.html。确认方向后移植进 archive.html，届时删除两个 test 文件。 -->
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet" />
 
   <style>
-    /* ── 设计系统变量（与全站一致） ── */
+    /* ── 设计系统变量（与全站一致，无新增颜色） ── */
     :root {
       --bg:      #fafaf7;   /* 页面背景：暖白 */
-      --border:  #e0e0dc;   /* 分割线 */
+      --surface: #f2f2ef;   /* 卡片/区块背景 */
+      --border:  #e0e0dc;   /* 边框、分割线 */
       --text:    #111111;   /* 正文近黑 */
       --muted:   #8a8a85;   /* 辅助文字 */
-      --paper:   #fbfaf5;   /* 书页纸白 */
 
-      /* 烫金：从暗金到亮金的渐变，clip 到文字上 */
-      --foil: linear-gradient(105deg, #8a6d3b 0%, #c9a962 38%, #ecdcae 50%, #c9a962 62%, #8a6d3b 100%);
-      --foil-solid: #c9a962; /* 不支持渐变文字时的兜底金色 */
-
-      /* 书的几何尺寸（封面宽 / 书高），厚度由每本书的 --t 决定 */
+      /* 书的几何：展开后的封面宽 / 书高；书脊宽由每本的 --t 决定 */
       --bw: 250px;
       --bh: 360px;
     }
@@ -51,7 +49,7 @@
       margin-top: 0.25rem;
     }
 
-    /* ── 书架区：占满剩余高度，书垂直居中 ── */
+    /* ── 书架区：占满剩余高度，书居中 ── */
     .stage {
       flex: 1;
       display: flex;
@@ -59,157 +57,96 @@
       justify-content: center;
     }
 
-    /* 书架：一排书，站在一条极简搁板线上 */
+    /* 书架：一排扁平书脊，站在一条极简搁板线上 */
     .shelf {
       display: flex;
       align-items: flex-end;
       justify-content: center;
-      gap: 8px;
-      padding-bottom: 16px;                  /* 书和搁板线之间留一点空隙给影子 */
+      gap: 10px;
+      padding-bottom: 14px;
       border-bottom: 1px solid var(--border);
       transition: opacity 0.4s ease;
     }
     /* 打开某本书时，其余的书淡出让位 */
     .shelf.opening .slot:not(.active) { opacity: 0; pointer-events: none; }
 
-    /* ── 书位（slot）：书在书架上占的横向空间 ──
-       默认宽度 = 书的厚度（只露书脊）；hover 时展开到封面宽度，
-       宽度变化会自然把邻居"挤开"，模拟抽书时旁边的书让位。
-       透视放在每个 slot 上（而非整排共享）——每本书都被正面观看，
-       静止时不会从侧面漏出封面的窄边。 */
+    /* ── 书脊（slot）：一个扁平竖条 ──
+       默认宽度 = 厚度（照片越多越宽，数据本身就是造型）；
+       hover / 打开时平面地展宽到封面宽度，邻居被自然挤开——
+       同一个"抽书让位"的骨架，但没有任何透视表演。 */
     .slot {
       position: relative;
       width: calc(var(--t) * 1px);
       height: var(--bh);
-      perspective: 1600px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      overflow: hidden;
       cursor: pointer;
       transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1),
                   opacity 0.4s ease;
     }
     .slot:hover, .slot.active { width: var(--bw); }
 
-    /* 书脚下的影子：跟随书位宽度一起变宽 */
-    .slot::after {
-      content: '';
+    /* ── 书脊态：竖排年份，居中 ── */
+    .spine-label {
       position: absolute;
-      left: 8%;
-      right: 8%;
-      bottom: -13px;
-      height: 8px;
-      background: radial-gradient(ellipse at center, rgba(0,0,0,0.18), transparent 70%);
-      transition: inherit;
-    }
-
-    /* ── 书本体：一个 3D 盒子 ──
-       默认 rotateY(90deg)：书脊面向观众；
-       hover 转到 rotateY(16deg)：封面转出来，保留一点角度维持立体感；
-       点击打开（.active）：转正到 0° 并放大，作为"走进这本书"的过渡。 */
-    .book {
-      position: absolute;
-      left: 50%;
-      top: 0;
-      width: var(--bw);
-      height: var(--bh);
-      margin-left: calc(var(--bw) / -2);
-      transform-style: preserve-3d;
-      transform: rotateY(90deg);
-      transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-    .slot:hover .book { transform: rotateY(16deg); }
-    .slot.active .book { transform: rotateY(0deg) scale(1.4); }
-
-    /* 3D 盒子的各个面 */
-    .face { position: absolute; top: 0; }
-
-    /* 正面封面 & 封底：低饱和布面精装，照片像"贴上去的图版"（tipped-in plate） */
-    .cover, .backc {
-      left: 0;
-      width: var(--bw);
-      height: var(--bh);
-      background-color: var(--cloth);
-      /* 极淡的经纬纹理，模拟布面 */
-      background-image:
-        repeating-linear-gradient(0deg,  rgba(255,255,255,0.045) 0 1px, transparent 1px 3px),
-        repeating-linear-gradient(90deg, rgba(0,0,0,0.03)        0 1px, transparent 1px 3px);
-    }
-    .cover { transform: translateZ(calc(var(--t) * 0.5px)); }
-    .backc { transform: rotateY(180deg) translateZ(calc(var(--t) * 0.5px)); }
-
-    /* 封面上的照片图版 */
-    .cover .plate {
-      display: block;
-      width: calc(100% - 40px);
-      height: 240px;
-      margin: 20px auto 0;
-      object-fit: cover;
-      border: 1px solid rgba(0,0,0,0.35);
-    }
-
-    /* 烫金文字：金色渐变 clip 进字形，配一丝极淡的压痕阴影 */
-    .foil {
-      color: var(--foil-solid);
-      background: var(--foil);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-shadow: 0 1px 1px rgba(0,0,0,0.15);
-    }
-
-    /* 封面下方的年份烫金字 */
-    .cover .label { text-align: center; margin-top: 18px; }
-    .cover .label .year  { font-size: 2rem; font-weight: 500; letter-spacing: 0.14em; line-height: 1.1; }
-    .cover .label .count { font-size: 0.85rem; letter-spacing: 0.22em; margin-top: 3px; opacity: 0.85; }
-
-    /* ── 书脊：默认示人的一面 ── */
-    .spine {
-      left: 50%;
-      width: calc(var(--t) * 1px);
-      height: var(--bh);
-      margin-left: calc(var(--t) * -0.5px);
-      transform: rotateY(-90deg) translateZ(calc(var(--bw) / 2));
-      background-color: var(--cloth);
-      background-image:
-        repeating-linear-gradient(0deg,  rgba(255,255,255,0.045) 0 1px, transparent 1px 3px),
-        repeating-linear-gradient(90deg, rgba(0,0,0,0.03)        0 1px, transparent 1px 3px),
-        /* 书脊左右两侧一点点暗部，做出圆脊的错觉 */
-        linear-gradient(90deg, rgba(0,0,0,0.16) 0, transparent 20%, transparent 80%, rgba(0,0,0,0.16) 100%);
+      inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-    }
-    /* 书脊上下的装帧线（烫金压线） */
-    .spine::before, .spine::after {
-      content: '';
-      position: absolute;
-      left: 16%;
-      right: 16%;
-      height: 1px;
-      background: rgba(201,169,98,0.6);
-    }
-    .spine::before { top: 30px; box-shadow: 0 4px 0 rgba(201,169,98,0.6); }
-    .spine::after  { bottom: 30px; box-shadow: 0 -4px 0 rgba(201,169,98,0.6); }
-    /* 书脊上的竖排年份（烫金） */
-    .spine .year {
       writing-mode: vertical-rl;
-      font-size: 1.15rem;
+      font-size: 1.05rem;
       font-weight: 500;
       letter-spacing: 0.5em;
+      color: var(--text);
+      opacity: 1;
+      transition: opacity 0.3s ease;
     }
+    /* 展开后书脊字让位给封面 */
+    .slot:hover .spine-label, .slot.active .spine-label { opacity: 0; }
 
-    /* ── 书口：右侧露出的纸页白边（细密的纸纹） ── */
-    .edge {
-      left: 50%;
-      width: calc(var(--t) * 1px);
-      height: var(--bh);
-      margin-left: calc(var(--t) * -0.5px);
-      transform: rotateY(90deg) translateZ(calc(var(--bw) / 2));
-      background: repeating-linear-gradient(90deg, #fbfaf5 0 2px, #e6e3d8 2px 3px);
+    /* ── 封面态：照片图版 + 年份 + 张数（hover 展开后浮现） ──
+       固定为展开宽度，靠 slot 的 overflow:hidden 裁切，避免展宽过程中排版跳动 */
+    .cover-view {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: var(--bw);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.35s ease 0.1s;
+    }
+    .slot:hover .cover-view, .slot.active .cover-view { opacity: 1; }
+
+    /* 封面照片：与全站照片同一待遇 —— 1px 黑描边 */
+    .cover-view img {
+      width: calc(100% - 48px);
+      height: 240px;
+      object-fit: cover;
+      border: 1px solid var(--text);
+    }
+    .cover-view .year {
+      margin-top: 18px;
+      font-size: 1.5rem;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      line-height: 1;
+    }
+    .cover-view .count {
+      margin-top: 4px;
+      font-size: 0.8rem;
+      letter-spacing: 0.22em;
+      color: var(--muted);
     }
 
     /* ════════════════════════════════════════════
-       阅读视图（reader）：翻开书之后的内页
-       版式：当前页占满大部分屏幕，右侧留出书缝 + 下一页的窄边，
-       像一本摊开的书，你正读左边这页，右边那页微微露出来。
+       阅读视图（reader）：翻开书之后
+       版式骨架不变：主页大图 + 页码，右侧露出下一页的窄边；
+       "书缝"退化成一根 1px 分割线——版面语言，不是道具语言。
        ════════════════════════════════════════════ */
     #reader {
       position: fixed;
@@ -223,22 +160,18 @@
     }
     #reader.open { opacity: 1; pointer-events: auto; }
 
-    /* 当前页：一张纸，照片是纸上的图版 */
+    /* 主页：当前照片 + 页码 */
     .page-main {
       flex: 1;
-      background: var(--paper);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      position: relative;
-      /* 靠近书缝一侧的纸面阴影：纸陷进装订的感觉 */
-      box-shadow: inset -30px 0 40px -30px rgba(0,0,0,0.25);
     }
     .page-main img {
       max-width: 78%;
       max-height: 74vh;
-      border: 1px solid rgba(0,0,0,0.55);
+      border: 1px solid var(--text);
       transition: opacity 0.28s ease, transform 0.28s ease;
     }
     /* 页脚：年份 + 页码（folio） */
@@ -250,26 +183,16 @@
       transition: opacity 0.28s ease;
     }
 
-    /* 书缝：两页之间深下去的一道折痕 */
-    .gutter {
-      width: 26px;
-      background: linear-gradient(90deg,
-        rgba(0,0,0,0.28) 0%,
-        rgba(0,0,0,0.55) 48%,
-        rgba(0,0,0,0.30) 60%,
-        rgba(0,0,0,0.08) 100%);
-    }
+    /* 书缝：一根细线 */
+    .gutter { width: 1px; background: var(--border); }
 
-    /* 右侧微露的下一页：只看到窄窄一条，暗示还能翻 */
+    /* 右侧微露的下一页：安静地立在线右边，暗示还能翻 */
     .page-peek {
       width: 88px;
-      background: var(--paper);
-      box-shadow: inset 18px 0 24px -18px rgba(0,0,0,0.3);
       position: relative;
       overflow: hidden;
       cursor: pointer;
     }
-    /* 下一页图版露出的边缘 */
     .page-peek img {
       position: absolute;
       top: 50%;
@@ -277,23 +200,21 @@
       transform: translateY(-50%);
       height: 60vh;
       max-width: none;
-      border: 1px solid rgba(0,0,0,0.4);
-      opacity: 0.9;
+      border: 1px solid var(--text);
     }
-    /* 已经是最后一页时，右侧只剩空白纸页 */
+    /* 已是最后一页：右侧留白即可 */
     .page-peek.blank img { display: none; }
 
-    /* 翻页时照片的滑动+渐隐（方向感：往前翻向左走，往回翻向右走） */
+    /* 翻页动画：方向感的滑动+渐隐（与全站 fluid 语言一致） */
     .page-main.turn-next img   { opacity: 0; transform: translateX(-36px); }
     .page-main.turn-prev img   { opacity: 0; transform: translateX(36px); }
     .page-main.turn-next .folio, .page-main.turn-prev .folio { opacity: 0; }
 
-    /* 阅读视图右上角的出口（与全站 Way out 同构）
-       右移量 = 书缝 26px + 右侧露页 88px + 2rem，保证按钮落在主页面纸上，不被书缝压住 */
+    /* 出口（与全站 Way out 同构），落在主页区域内 */
     #reader .way-out {
       position: absolute;
       top: 1.6rem;
-      right: calc(88px + 26px + 2rem);
+      right: calc(88px + 1px + 2rem);
       z-index: 2;
       font-size: 1.05rem;
       letter-spacing: 0.06em;
@@ -306,7 +227,7 @@
     }
     #reader .way-out:hover { color: var(--text); }
 
-    /* 阅读视图左上角：这本书是哪一年 */
+    /* 左上角：这本书是哪一年 */
     #reader .book-title {
       position: absolute;
       top: 1.6rem;
@@ -323,7 +244,7 @@
   <!-- 页头 -->
   <header>
     <h1>Archive</h1>
-    <p>散片档案 · 书架原型（test）</p>
+    <p>散片档案 · 书架原型 · 扁平版（test）</p>
   </header>
 
   <!-- 书架 -->
@@ -351,44 +272,28 @@
   <script>
     // ══ 第一部分：从 allArchive 生成书架 ══
 
-    // 每年的布面底色：统一压低饱和度（近灰的暖调），靠烫金提精神
-    var clothColors = {
-      '2021': '#807d76',
-      '2022': '#757971',
-      '2023': '#7b7268',
-      '2024': '#686c72',
-      '2025': '#7e776d',
-    };
-
     var shelf = document.getElementById('shelf');
     var years = Object.keys(allArchive).sort();   // 2021 → 2025，从左到右按时间排
 
     years.forEach(function (year) {
       var photos = allArchive[year];
-      // 书的厚度：底厚 22px + 每张照片 1.3px（2021 薄、2024 最厚，一眼看出哪年拍得多）
-      var thickness = Math.round(22 + photos.length * 1.3);
+      // 书脊宽度：底宽 16px + 每张照片 1.6px（数据即造型：一眼看出哪年拍得多）
+      var thickness = Math.round(16 + photos.length * 1.6);
       var cover = photos[0].src;                  // 封面图 = 当年数组第一张
 
       var slot = document.createElement('div');
       slot.className = 'slot';
       slot.style.setProperty('--t', thickness);
-      slot.style.setProperty('--cloth', clothColors[year] || '#7a756c');
 
       slot.innerHTML =
-        '<div class="book">' +
-          '<div class="face cover">' +
-            '<img class="plate" src="' + cover + '" alt="' + year + ' 年鉴封面" />' +
-            '<div class="label">' +
-              '<div class="year foil">' + year + '</div>' +
-              '<div class="count foil">' + photos.length + ' PHOTOS</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="face backc"></div>' +
-          '<div class="face spine"><span class="year foil">' + year + '</span></div>' +
-          '<div class="face edge"></div>' +
+        '<div class="spine-label">' + year + '</div>' +
+        '<div class="cover-view">' +
+          '<img src="' + cover + '" alt="' + year + ' 封面" />' +
+          '<div class="year">' + year + '</div>' +
+          '<div class="count">' + photos.length + ' PHOTOS</div>' +
         '</div>';
 
-      // 点击 = 翻开这本书：书转正放大，其余书淡出，然后进入阅读视图
+      // 点击 = 翻开这本书
       slot.addEventListener('click', function () { openBook(year, slot); });
 
       shelf.appendChild(slot);
@@ -406,10 +311,10 @@
 
     var currentYear   = null;   // 当前翻开的是哪一年
     var currentIndex  = 0;      // 当前看到第几张
-    var activeSlot    = null;   // 书架上被翻开的那本书（用于合上时还原）
-    var turning       = false;  // 翻页动画进行中，防止连点错乱
+    var activeSlot    = null;   // 书架上被翻开的那本（合上时还原）
+    var turning       = false;  // 翻页动画进行中，防连点错乱
 
-    // 翻开一本书：先让书转正放大（0.55s），再淡入阅读视图
+    // 翻开：书脊展宽露出封面，其余书淡出，然后淡入阅读视图
     function openBook(year, slot) {
       currentYear  = year;
       currentIndex = 0;
@@ -419,10 +324,10 @@
       setTimeout(function () {
         renderPage();
         reader.classList.add('open');
-      }, 420);
+      }, 380);
     }
 
-    // 合上书：阅读视图淡出，书转回书架
+    // 合上：阅读视图淡出，书架还原
     function closeBook() {
       reader.classList.remove('open');
       shelf.classList.remove('opening');
@@ -440,7 +345,7 @@
       pageFolio.textContent = currentYear + ' — ' + (currentIndex + 1) + ' / ' + photos.length;
       readerTitle.textContent = currentYear;
 
-      // 下一页预览：还有下一张就露它的边，没有就露空白纸页
+      // 下一页预览：还有下一张就露它的边，没有就留白
       var next = photos[currentIndex + 1];
       if (next) {
         pagePeek.classList.remove('blank');
@@ -450,19 +355,18 @@
       }
     }
 
-    // 翻页：dir = +1 往后 / -1 往回。两段式：旧页滑出渐隐 → 换内容 → 新页滑入
+    // 翻页：dir = +1 往后 / -1 往回。旧页滑出渐隐 → 换内容 → 新页滑入
     function turnPage(dir) {
       if (turning || !currentYear) return;
       var photos = allArchive[currentYear];
       var target = currentIndex + dir;
-      if (target < 0 || target >= photos.length) return;   // 到头就停住（不循环）
+      if (target < 0 || target >= photos.length) return;   // 到头停住（不循环）
 
       turning = true;
       pageMain.classList.add(dir > 0 ? 'turn-next' : 'turn-prev');
       setTimeout(function () {
         currentIndex = target;
         renderPage();
-        // 新页从反方向滑入：先瞬移到入场位，再下一帧回正
         pageMain.classList.remove('turn-next', 'turn-prev');
         turning = false;
       }, 280);
@@ -470,7 +374,7 @@
 
     // 右侧露出的下一页：点它 = 翻过去
     pagePeek.addEventListener('click', function () { turnPage(1); });
-    // 主页面左半边点击 = 往回翻（简易导航，正式版会接 fluid.js 手势）
+    // 主页面左半边点击 = 往回翻，右半边 = 往后翻（正式版会接 fluid.js 手势）
     pageMain.addEventListener('click', function (e) {
       var mid = pageMain.getBoundingClientRect().width / 2;
       turnPage(e.clientX < mid ? -1 : 1);
