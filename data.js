@@ -1098,3 +1098,158 @@ var allArchive = {
   ],
 
 };
+
+
+// ================================================================
+// allFilms — Film（胶卷档案）按"卷"组织
+// ================================================================
+// Film 是和 Gallery / Archive 平级的第三种浏览维度：
+//   - Gallery = 按系列看（策展过的作品）
+//   - Archive = 按年份看（散片，一年一本书）
+//   - Film    = 按物质载体看（一卷胶片 = 一个时间胶囊）
+//
+// 数据结构：一个数组，每个元素是一卷胶片。
+// 页面会自动按 stock（胶卷型号）分组成一排一排的架子：
+//   同型号的卷站在同一层搁板上；排的顺序 = 型号在数组里首次出现的顺序。
+//
+// 每卷的字段：
+//   id:     唯一标识，与 assets/images/film/ 下的文件夹名完全一致（连字符，不要空格）
+//           命名习惯：型号缩写-序号，如 portra400-01、gold200-02
+//   stock:  胶卷型号全名（同一型号必须一字不差，否则会被分到两排）
+//   format: '135' 或 '120' —— 决定筒的造型（135 金属暗盒带片轴头 / 120 纸封卷）
+//           和阅读视图的片框（135 有齿孔 / 120 无齿孔）
+//   camera: 拍摄相机，可空（''）则不显示；一次性相机写 '一次性相机 · Fuji QuickSnap'
+//   date:   拍摄时间，可空（''）则不显示（忘了就空着，诚实比编造好）
+//   photos: 照片数组，顺序 = 这卷的拍摄顺序（第一张 = 抽出片头预览时露出的那张）
+//           每张只放 src、alt 和可选 note（一句话页脚），与 Archive 同一哲学：
+//           想配完整文案（标题/日期/地点/器材）的照片应该进 Gallery。
+//
+// 添加一卷的流程：
+//   1. 在 assets/images/film/ 下建文件夹，名字 = id（如 portra400-03）
+//   2. 照片按拍摄顺序命名 01.jpeg、02.jpeg…放进去（HEIC 需先转 JPEG 压缩，规则同全站）
+//   3. 在下面数组里加一段（照抄任意一卷的格式），刷新 film.html（缓存用 Cmd+Shift+R）
+// ================================================================
+// ⚠️ 以下是测试数据：照片临时借用 Archive 的图，仅用于看效果。
+//    作者填好 assets/images/film/ 各文件夹后，把 src 换成真实路径、
+//    并把 stock / format / camera 改成每卷的真实信息。
+// ================================================================
+var allFilms = [
+
+  {
+    id:     'portra400-01',
+    stock:  'Kodak Portra 400',
+    format: '135',
+    camera: '',
+    date:   '',
+    photos: [
+      { src: 'assets/images/archive/2025/1.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/2.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/3.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/4.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/5.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/6.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/7.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/8.jpeg', alt: '' },
+    ],
+  },
+
+  {
+    id:     'portra400-02',
+    stock:  'Kodak Portra 400',
+    format: '120',
+    camera: 'Pentax 67',
+    date:   '',
+    photos: [
+      { src: 'assets/images/archive/2025/9.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/10.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/11.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/12.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/13.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/14.jpeg', alt: '' },
+    ],
+  },
+
+  {
+    id:     'gold200-01',
+    stock:  'Kodak Gold 200',
+    format: '135',
+    camera: '',
+    date:   '',
+    photos: [
+      { src: 'assets/images/archive/2025/15.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/16.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/17.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/18.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/19.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/20.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/21.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/22.jpeg', alt: '' },
+    ],
+  },
+
+  {
+    id:     'gold200-02',
+    stock:  'Kodak Gold 200',
+    format: '135',
+    camera: '',
+    date:   '',
+    photos: [
+      { src: 'assets/images/archive/2025/23.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/24.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/25.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/26.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/27.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/28.jpeg', alt: '' },
+      { src: 'assets/images/archive/2025/29.jpeg', alt: '' },
+    ],
+  },
+
+  {
+    id:     'ektar100-01',
+    stock:  'Kodak Ektar 100',
+    format: '135',
+    camera: '',
+    date:   '',
+    photos: [
+      { src: 'assets/images/archive/2024/1.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/2.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/3.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/4.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/5.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/6.jpeg', alt: '' },
+    ],
+  },
+
+  {
+    id:     'superia400-01',
+    stock:  'Fujicolor Superia X-TRA 400',
+    format: '135',
+    camera: '一次性相机 · Fuji QuickSnap',
+    date:   '',
+    photos: [
+      { src: 'assets/images/archive/2024/7.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/8.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/9.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/10.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/11.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/12.jpeg', alt: '' },
+    ],
+  },
+
+  {
+    id:     'kodak800-01',
+    stock:  'Kodak 800',
+    format: '135',
+    camera: '一次性相机 · Kodak FunSaver',
+    date:   '',
+    photos: [
+      { src: 'assets/images/archive/2024/13.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/14.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/15.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/16.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/17.jpeg', alt: '' },
+      { src: 'assets/images/archive/2024/18.jpeg', alt: '' },
+    ],
+  },
+
+];
