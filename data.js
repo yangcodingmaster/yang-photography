@@ -1251,10 +1251,10 @@ var allFilms = [
 
   {
     id:     'kodak800-01',
-    stock:  'Kodak 800',
-    label:  'KODAK 800',
+    stock:  'Kodak Portra 800',
+    label:  'PORTRA 800',
     format: '135',
-    camera: '一次性相机 · Kodak FunSaver',
+    camera: '',
     date:   '2023.08',
     photos: [
       { src: 'assets/images/archive/2024/13.jpeg', alt: '' },

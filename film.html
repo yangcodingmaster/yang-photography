@@ -131,12 +131,20 @@
       align-items: center;
       justify-content: center;
     }
-    /* 真实壳模式：135 暗盒上下两端的金属压盖 */
+    /* 真实壳模式：135 暗盒上下两端的压盖 */
     .can-cap {
       position: absolute;
       left: 0;
       right: 0;
       height: 9px;
+    }
+    /* 真实壳模式：壳身侧面的品牌色竖条（柯达 Professional 系的柯达黄） */
+    .can-stripe {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 14px;
     }
     /* 135：型号竖排印在筒身上（真实暗盒的印法）。
        label 按空格拆行；vertical-rl + rotate(180deg) = 字底朝上、
@@ -454,17 +462,22 @@
     // 只换"皮肤"：几何、剪影、交互、数据全部不变，随时一行切回。
     var REAL_SHELLS = true;
 
-    // 各型号的品牌色（键 = data.js 里的 stock 全名；查不到的型号自动回退抽象灰调）。
+    // 各型号的品牌色，按真实暗盒扁平化（键 = data.js 里的 stock 全名；查不到自动回退抽象灰调）：
+    //   柯达 Professional 系（Portra / Ektar）= 黑壳 + 柯达黄侧竖条 + 白字
+    //   Gold = 金黄壳 + 黑字（数字带金红）；Superia = 富士绿壳 + 白字
+    // 字段：body 壳身 / stripe 侧竖条（无则 null）/ text 字母列 / num 数字列（缺省同 text）
+    //       bandBg + bandText = 120 纸封腰带的底色和字色
     // ⚠️ 这里是全站唯一允许硬编码颜色的地方：胶卷的品牌色属于"内容"而非设计系统，
     //    就像照片本身有颜色一样——设计系统的规矩管的是界面，不管展品。
+    var KODAK_YELLOW = '#f2b400';
     var SHELL_STYLES = {
-      'Kodak Portra 400':            { body: '#f2ecdd', text: '#3f3a33', accent: '#e07b25', bandText: '#ffffff' },
-      'Kodak Gold 200':              { body: '#efc93f', text: '#43391f', accent: '#c8342b', bandText: '#ffffff' },
-      'Kodak Ektar 100':             { body: '#f4f1ea', text: '#c8342b', accent: '#1f4e9c', bandText: '#ffffff' },
-      'Fujicolor Superia X-TRA 400': { body: '#14724a', text: '#f2f2ef', accent: '#f0b32a', bandText: '#14724a' },
-      'Kodak 800':                   { body: '#efc93f', text: '#43391f', accent: '#c8342b', bandText: '#ffffff' },
+      'Kodak Portra 400':            { body: '#221f1c', stripe: KODAK_YELLOW, text: '#f5f2ec', bandBg: KODAK_YELLOW, bandText: '#221f1c' },
+      'Kodak Portra 800':            { body: '#221f1c', stripe: KODAK_YELLOW, text: '#f5f2ec', bandBg: KODAK_YELLOW, bandText: '#221f1c' },
+      'Kodak Ektar 100':             { body: '#221f1c', stripe: KODAK_YELLOW, text: '#f5f2ec', bandBg: KODAK_YELLOW, bandText: '#221f1c' },
+      'Kodak Gold 200':              { body: '#f0c435', stripe: null, text: '#221f1c', num: '#c8342b', bandBg: '#221f1c', bandText: '#f0c435' },
+      'Fujicolor Superia X-TRA 400': { body: '#15804d', stripe: null, text: '#f5f2ec', bandBg: '#f5f2ec', bandText: '#15804d' },
     };
-    var SHELL_METAL = '#3f3d3a';   // 135 暗盒的金属端盖 / 片轴头颜色
+    var SHELL_DARK = '#1c1a18';    // 135 暗盒的端盖 / 片轴头（真实暗盒两端是黑色压盖）
 
     // ── 给一个容器填一排齿孔（多填一些，靠 overflow:hidden 居中裁掉）──
     function buildHoles(el, count) {
@@ -529,8 +542,8 @@
         var canInner;
         if (roll.format === '120') {
           canInner = st
-            ? '<div class="can-body" style="background:' + st.body + ';border:1px solid rgba(0,0,0,0.22)">' +
-                '<div class="can-band font-display" style="background:' + st.accent + ';border-top:1px solid rgba(0,0,0,0.15);border-bottom:1px solid rgba(0,0,0,0.15)">' +
+            ? '<div class="can-body" style="background:' + st.body + ';border:1px solid rgba(0,0,0,0.25)">' +
+                '<div class="can-band font-display" style="background:' + st.bandBg + ';border-top:1px solid rgba(0,0,0,0.15);border-bottom:1px solid rgba(0,0,0,0.15)">' +
                   labelLines(roll.label, st.bandText, st.bandText) +
                 '</div>' +
               '</div>'
@@ -541,11 +554,15 @@
               '</div>';
         } else {
           canInner = st
-            ? '<div class="can-knob" style="background:' + SHELL_METAL + ';border:1px solid rgba(0,0,0,0.35)"></div>' +
-              '<div class="can-body" style="background:' + st.body + ';border:1px solid rgba(0,0,0,0.22)">' +
-                '<div class="can-cap" style="top:0;background:' + SHELL_METAL + '"></div>' +
-                '<div class="can-label-v font-display">' + labelLines(roll.label, st.text, st.accent) + '</div>' +
-                '<div class="can-cap" style="bottom:0;background:' + SHELL_METAL + '"></div>' +
+            ? '<div class="can-knob" style="background:' + SHELL_DARK + ';border:1px solid rgba(0,0,0,0.4)"></div>' +
+              '<div class="can-body" style="background:' + st.body + ';border:1px solid rgba(0,0,0,0.25)">' +
+                (st.stripe ? '<div class="can-stripe" style="background:' + st.stripe + '"></div>' : '') +
+                '<div class="can-cap" style="top:0;background:' + SHELL_DARK + '"></div>' +
+                // 有侧竖条时印字往右让开，仍在剩余区域内居中
+                '<div class="can-label-v font-display"' + (st.stripe ? ' style="margin-left:14px"' : '') + '>' +
+                  labelLines(roll.label, st.text, st.num || st.text) +
+                '</div>' +
+                '<div class="can-cap" style="bottom:0;background:' + SHELL_DARK + '"></div>' +
               '</div>'
             : '<div class="can-knob bg-site-border border border-site-muted/50"></div>' +
               '<div class="can-body bg-site-border border border-site-muted/50">' +
