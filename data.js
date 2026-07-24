@@ -1250,7 +1250,7 @@ var allFilms = [
   },
 
   {
-    id:     'kodak800-01',
+    id:     'portra800-01',
     stock:  'Kodak Portra 800',
     label:  'PORTRA 800',
     format: '135',
