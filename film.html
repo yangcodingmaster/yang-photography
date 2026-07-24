@@ -154,25 +154,11 @@
       line-height: 1.5;
     }
 
-    /* ── 片头舌（tongue）：135 常态就露出的一小截片头 ──
-       不与胶片同高、外端带弧度像个把手——刚拿到的新胶卷就是这样，
-       也是"这里能抽"的暗示。抽出片头（hover/预览/翻开）时它淡出，
-       由完整片头（leader）接管。 */
-    .tongue {
-      position: absolute;
-      left: calc(var(--cw) * 1px - 2px);
-      bottom: 16px;
-      width: 11px;
-      height: 30px;
-      border-radius: 0 5px 5px 0;
-      transition: opacity 0.2s ease;
-    }
-    @media (hover: hover) { .bay:hover .tongue { opacity: 0; } }
-    .bay.preview .tongue, .bay.active .tongue { opacity: 0; }
-
-    /* ── 片头（leader）：从筒身右侧抽出的一截胶片，含这卷第一张 ──
-       收起时隐藏（否则筒右侧留给片头舌的缝里会先漏出它的边），
-       抽出时随展宽渐显 */
+    /* ── 片头（leader）：一整条胶片 + 末端的片头舌，是同一个实物 ──
+       收起时整条藏在筒身后面（筒身不透明、层级更高），只有末端的
+       舌尖露在筒外；hover/预览/翻开时整条向右滑出——舌尖始终在最
+       前端，就是"捏着舌头把片头抽出来"的动作，与 bay 展宽同一条
+       缓动曲线，同步到位。 */
     .leader {
       position: absolute;
       left: calc(var(--cw) * 1px - 2px);  /* 与筒身衔接（盖掉一条描边） */
@@ -181,11 +167,22 @@
       height: calc(var(--sh) * 1px);
       display: flex;
       flex-direction: column;
-      opacity: 0;
-      transition: opacity 0.25s ease 0.05s;
+      transform: translateX(-190px);      /* 收起：整条藏进筒后 */
+      transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    @media (hover: hover) { .bay:hover .leader { opacity: 1; } }
-    .bay.preview .leader, .bay.active .leader { opacity: 1; }
+    @media (hover: hover) { .bay:hover .leader { transform: translateX(0); } }
+    .bay.preview .leader, .bay.active .leader { transform: translateX(0); }
+
+    /* 片头舌（tip）：挂在片头条末端的一小截——不与胶片同高、外端带
+       弧度像个把手，刚拿到的新胶卷就是这样，也是"这里能抽"的暗示 */
+    .leader .tip {
+      position: absolute;
+      right: -11px;
+      bottom: 12px;
+      width: 12px;
+      height: 30px;
+      border-radius: 0 5px 5px 0;
+    }
     /* 齿孔带（135 专用；120 的片头没有齿孔，用 padding 留出素黑边） */
     .perf {
       flex-shrink: 0;
@@ -345,6 +342,7 @@
     /* 系统开了"减弱动态效果"：抽片头/居中位移不做动画，直接到位 */
     @media (prefers-reduced-motion: reduce) {
       .bay      { transition: opacity 0.4s ease; }
+      .leader   { transition: none; }
       .row-cans { transition: none; }
     }
   </style>
@@ -514,7 +512,7 @@
             '</div>';
         }
 
-        // 片头：这卷的第一张，嵌在小片框里（135 带齿孔，120 素黑边）
+        // 片头：这卷的第一张，嵌在小片框里（135 带齿孔 + 末端片头舌，120 素黑边无舌）
         var leader =
           '<div class="leader bg-site-text' + (roll.format === '120' ? ' f120' : '') + '">' +
             '<div class="perf"></div>' +
@@ -524,13 +522,12 @@
               (cover ? '<img src="' + cover + '" alt="' + roll.stock + ' 片头" />' : '') +
             '</div>' +
             '<div class="perf"></div>' +
+            // 片头舌挂在条的末端，跟着整条一起滑（120 是封好的纸卷，没有舌）
+            (roll.format === '120' ? '' : '<div class="tip bg-site-text"></div>') +
           '</div>';
 
-        // 片头舌：135 常态露出的一小截（放在 leader 之前，抽出时被完整片头盖住/接替）
-        var tongue = (roll.format === '120') ? '' : '<div class="tongue bg-site-text"></div>';
-
         bay.innerHTML =
-          '<div class="slot">' + tongue + leader + '<div class="can">' + canInner + '</div></div>' +
+          '<div class="slot">' + leader + '<div class="can">' + canInner + '</div></div>' +
           // 脚下小日期（没写就不渲染这行）
           (roll.date ? '<div class="bay-date font-display text-site-muted">' + roll.date + '</div>' : '');
         // 135 的片头齿孔（120 的 .perf 留空即无齿孔）
