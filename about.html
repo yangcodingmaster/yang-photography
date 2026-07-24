@@ -6,7 +6,9 @@
   <title>关于 / About — Yang Photography</title>
 
   <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind 运行时（本地副本）：国内节点访问 cdn.tailwindcss.com 不稳定，
+       一旦加载失败整站会退化成没有样式的裸文字，所以放在自己服务器上 -->
+  <script src="assets/vendor/tailwind.js"></script>
 
   <!-- 设计系统（与其他页面保持一致） -->
   <script>
@@ -32,8 +34,9 @@
   </script>
 
   <!-- 字体加载 -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet" />
+  <!-- 字体（本地副本）：fonts.googleapis.com 在国内访问不到，在线引用会让
+       中英文字体全部回退成系统默认字体。文件由 scripts/fetch-fonts.py 抓取 -->
+  <link href="assets/vendor/fonts.css" rel="stylesheet" />
 </head>
 
 <body class="bg-site-bg text-site-text font-body antialiased">
