@@ -11,7 +11,7 @@
 |------|------|
 | **项目名** | 赵洋 个人摄影作品集 |
 | **阶段** | 核心功能完成，8 个 Gallery 系列 + 5 年 Archive 散片已上线，**已部署到 GitHub Pages**，文案待逐张填入 |
-| **托管** | GitHub Pages：仓库 `yangcodingmaster/yang-photography`，线上地址 https://yangcodingmaster.github.io/yang-photography/ |
+| **托管** | 当前：GitHub Pages（`yangcodingmaster/yang-photography`，https://yangcodingmaster.github.io/yang-photography/ ）<br>迁移中：阿里云国内节点 + 宝塔，域名备案中。**原因：github.io 在国内被运营商屏蔽，分享到微信打不开**，详见"分享卡片与国内部署"一节 |
 | **技术栈** | 纯 HTML + Tailwind CSS（CDN 版）+ 原生 JavaScript |
 | **语言** | 中英双语（目前两种语言同时展示，不做切换按钮） |
 | **照片** | 8 个 Gallery 系列（5 普通 + 3 分章，约 200 张）+ Archive 散片（2021–2025，共 123 张），均为真实作品，已无 demo |
@@ -66,13 +66,28 @@
 ├── archive.html            # Archive：书架式散片档案，每年一本书 + 翻开逐页阅读
 ├── about.html              # 关于页：个人介绍 + 联系方式
 │
+├── favicon.ico             # 浏览器标签页图标（16/32/48 三个尺寸打包在一个文件里）
+├── apple-touch-icon.png    # iOS/安卓"加到主屏"时用的大图标（180×180）
+│                           #    这两个由 scripts/make-share-card.sh 生成，别手改
+│
 ├── data.js                 # ⭐ 唯一的数据文件，所有内容只改这里
 │                           #    包含：allSeries、allPhotos、allChapters、allArchive
 ├── fluid.js                # 弹簧动画 + 滑动手势引擎（零依赖手写，series Lightbox 与 archive 阅读视图共用）
 │
+├── scripts/                # 维护脚本（不是网站的一部分，不影响访客）
+│   ├── share-card.html     #    分享缩略图的"模具"，浏览器截图用
+│   ├── make-share-card.sh  #    换分享图照片时跑它
+│   ├── set-domain.py       #    换域名时跑它（往 og 标签注入真实域名）
+│   └── fetch-fonts.py      #    重新抓取本地字体（改字重/换字体时才需要）
+│
 ├── assets/
+│   ├── vendor/             # ⭐ 境外资源的本地副本（国内节点必需，详见"部署"一节）
+│   │   ├── tailwind.js     #    Tailwind 运行时（407KB）
+│   │   ├── fonts.css       #    字体声明，由 fetch-fonts.py 生成，别手改
+│   │   └── fonts/          #    210 个 woff2 分片（约 12MB）
 │   └── images/
 │       ├── README.txt
+│       ├── share/          # 分享卡片缩略图（share-card.jpg，1200×1200）
 │       ├── gallery/                # ⭐ 所有 Gallery 系列放这里（id = 文件夹名）
 │       │   ├── Defocused/                    # 普通系列，01–06.jpeg
 │       │   ├── defocused-uk/                 # 普通系列，01–07.jpeg
@@ -344,13 +359,83 @@ note 是书架式改版后唯一的例外：一本书翻到某页时，页脚可
 
 ---
 
+## 分享卡片与国内部署
+
+### 为什么要迁到国内节点
+
+`github.io` 在工信部黑名单上，国内运营商（尤其移动）普遍屏蔽。后果有两层：
+微信服务器抓不到 `og:image`（卡片没图），以及**朋友点开是白屏**。卡片做得再好看，
+打不开就是负面效果。所以域名 + 国内节点是这件事的前提，不是可选项。
+
+### 境外依赖已全部本地化（⚠️ 别改回在线引用）
+
+| 依赖 | 国内表现 | 现在的做法 |
+|---|---|---|
+| `fonts.googleapis.com` | **确定被墙**，100% 失败 | `assets/vendor/fonts.css` + `fonts/`，210 个 woff2 分片 |
+| `cdn.tailwindcss.com` | 走 Cloudflare，时通时断 | `assets/vendor/tailwind.js`，单文件 407KB |
+
+字体保留了 Google 的 **unicode-range 分片**机制：中文被切成一百多片，浏览器只下载
+页面里真正出现过的那几片（gallery 页实测 12 片 / 784KB）。这样做的好处是——
+**将来往 data.js 填任何生僻字都不会缺字**，比一次性子集化稳。
+中文只保留 300/400 两个字重（页面用到的），Cormorant 砍掉了西里尔/越南语分片。
+
+> 想加中文粗体（600）：改 `scripts/fetch-fonts.py` 里的 `KEEP` 再跑一次。
+> 代价是多约一百个分片、四五兆体积，所以确实用得上再加。
+
+### 分享卡片（Open Graph）怎么工作
+
+把网址发到微信，微信服务器会先抓一遍这个页面，从 `<head>` 里读 `og:title` /
+`og:description` / `og:image` 拼成卡片。**这套标签微信、QQ、微博、飞书、Slack、
+iMessage 都读**，改一次全平台受益。
+
+微信的特殊规矩（跟 Facebook/Twitter 不一样，设计要迁就它）：
+
+- 卡片是**左小方图 + 右两行字**，缩略图会被**裁成正方形** → 所以分享图做成 1:1
+- 缩略图建议 ≥300×300，图必须**公网 https 可访问**
+- 描述手机端只显示一行，**约 15–20 字**，写长了白写
+- 微信会**缓存**抓取结果，改了图不一定立刻变 → 网址后加 `?v=2` 强制重抓
+
+**两条硬约束，改动前必读：**
+
+1. `og:image` 和 `og:url` **必须是完整网址**（带 `https://` 和域名）。
+   这是全站唯一允许出现绝对路径的地方——微信服务器拿着它去下载图片，相对路径抓不到。
+2. **微信抓取时不执行 JavaScript**。所以卡片内容必须写死在 HTML 里。
+   `series.html?id=xxx` 靠 JS 渲染，因此**做不到每个系列一张自己的封面**，
+   只能用通用文案。想做到就得改成静态多页，不值当。
+
+### 分享图怎么改
+
+分享图是 `assets/images/share/share-card.jpg`（1200×1200）：暖白纸面 + 居中照片
+（3px 黑描边）+ Cormorant 落款 "Yang"。用 `scripts/share-card.html` 这个模具经
+浏览器截图生成，所以和网站是同一套字体和颜色。
+
+- **换里面那张照片**：改 `scripts/make-share-card.sh` 里的 `PHOTO` 一行，再跑
+  `bash scripts/make-share-card.sh`（favicon 也会一并重新生成）
+- **选图标准**：优先高对比、构图简单的照片。缩略图在微信里只有百来像素，
+  细节丰富的照片缩到那个尺寸会糊成一团。当前用的是黑白柱廊逆光那张
+- **照片比网站上相对更大**是有意的：网站那种奢侈留白在百来像素下会显得空、不抓眼
+- 模具支持三种版式：`center`（当前用）、`polaroid`（照片偏上下方厚边）、`icon`（做图标）
+
+### 上线流程（域名备案通过后）
+
+1. `python3 scripts/set-domain.py 你的域名` —— 把占位域名换成真的。
+   **不做这步卡片就没图**，因为 og:image 还指向 www.example.com
+2. 宝塔建站，根目录 `/www/wwwroot/域名`，把整个项目打包上传解压，
+   确认 `index.html` 在根目录而不是子文件夹里
+3. 宝塔 → SSL → 免费证书申请 → 打开"强制 HTTPS"（微信抓图要求 https）
+4. 验证：把网址发到微信"文件传输助手"，看卡片。没图或还是旧的就在网址后加 `?v=2`
+
+---
+
 ## 技术规范
 
 ### Tailwind CSS
-- 使用 **CDN 版本**，每个 HTML 文件 `<head>` 里引入：
+- 使用 CDN 运行时版本，但引的是**本地副本**（国内节点访问 CDN 不稳定）：
   ```html
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/vendor/tailwind.js"></script>
   ```
+  ⚠️ 别改回 `https://cdn.tailwindcss.com`——一旦加载失败整站会变成没有样式的裸文字。
+  同理字体引的是 `assets/vendor/fonts.css`，不是 Google Fonts。理由见"分享卡片与国内部署"
 - 颜色、字体配置写在每个页面的 `tailwind.config` 脚本里
 - 优先用 Tailwind class，避免内联 `style=""`（仅动画/JS 动态控制时允许例外）
 
@@ -455,15 +540,24 @@ tailwind.config = {
 ## 待办 / 未来可能的方向
 
 ### 近期待完成
+- [ ] **⚠️ 域名备案通过后，第一件事：`python3 scripts/set-domain.py 你的域名`**
+      现在 og 标签里是占位域名 `www.example.com`，不换掉分享卡片就没有缩略图
+- [ ] 迁到阿里云国内节点（宝塔建站 → 上传 → 申请 SSL → 强制 HTTPS），
+      流程见"分享卡片与国内部署"一节
+- [ ] 关于页文案填好后，同步改 `about.html` 的 `og:description`
+      （现在是占位的"关于我，以及联系方式。"）
 - [ ] 填写真实文案（各系列 descZh/descEn，照片 caption/date/location/desc/meta，逐张手填）
 - [ ] 填写关于页自我介绍
 - [x] ~~往 Archive 放散片（2021–2025 已录入）~~
 - [x] ~~创建 GitHub 仓库并部署到 GitHub Pages~~（已上线）
+- [x] ~~分享卡片（Open Graph）+ favicon + 境外依赖本地化~~（`share-card` 分支）
 
 ### 未来可能的方向
 > 现阶段不实现，等需求明确后再讨论。
 
 - [ ] 风格和结构上的进一步打磨（待定，边用边想）
+- [ ] 字体体积优化：gallery 页要下 12 个中文分片约 784KB（300 和 400 两个字重都用到了）。
+      国内节点上线后如果觉得中文字体出现得慢，可以考虑中文统一收敛到 400 一个字重，能省掉近一半
 - [ ] 照片分类筛选（按题材横向筛选）
 - [ ] 语言切换按钮（中/英分离显示）
 - [ ] 首页照片墙：点击照片后跳转到对应系列
