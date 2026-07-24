@@ -51,23 +51,8 @@
       transition: opacity 0.4s ease;
     }
 
-    /* 一排 = 型号标牌 + 站在搁板线上的一列筒 */
+    /* 一排 = 站在搁板线上的一列筒（同型号；无标牌——型号印在筒身上，字越少越好） */
     .film-row {
-      display: flex;
-      align-items: flex-end;
-      gap: 2.5rem;
-      transition: opacity 0.4s ease;
-    }
-    /* 窄屏：标牌换行到搁板上方，筒仍站在搁板线上 */
-    @media (max-width: 640px) {
-      .film-row { flex-direction: column; align-items: flex-start; gap: 1rem; }
-    }
-
-    /* 型号标牌（像展柜里的说明牌），与筒同底对齐 */
-    .row-label {
-      flex-shrink: 0;
-      min-width: 11rem;
-      padding-bottom: 10px;
       transition: opacity 0.4s ease;
     }
 
@@ -79,26 +64,45 @@
       transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
-    /* ── 筒（slot）：宽度 = 筒身宽（--w），展开时加上片头长度 ──
-       内部：筒身固定在左缘，片头藏在筒身右侧，靠 overflow:hidden 裁掉；
-       展宽的过程就是"片头被抽出来"。 */
-    .slot {
+    /* ── 仓位（bay）：一卷占的位置 = 筒 + 脚下的小日期 ──
+       宽度动画在 bay 上做（展开时加上片头长度），日期跟着筒走 */
+    .bay {
       position: relative;
       width: calc(var(--w) * 1px);
-      height: calc(var(--h) * 1px);
-      overflow: hidden;
       flex-shrink: 0;
       cursor: pointer;
-      transform-origin: 50% 100%;         /* 按压时以"站在搁板上"的底边为支点 */
       transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-                  transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
                   opacity 0.4s ease;
     }
     /* hover 抽片头只给有光标的设备；触屏走两步交互（.preview 居中 → 再点翻开） */
-    @media (hover: hover) { .slot:hover { width: calc(var(--w) * 1px + 190px); } }
-    .slot.active, .slot.preview { width: calc(var(--w) * 1px + 190px); }
+    @media (hover: hover) { .bay:hover { width: calc(var(--w) * 1px + 190px); } }
+    .bay.active, .bay.preview { width: calc(var(--w) * 1px + 190px); }
+
+    /* 筒的裁切窗：筒身固定在左缘，片头藏在筒身右侧，靠 overflow:hidden 裁掉；
+       bay 展宽的过程就是"片头被抽出来" */
+    .slot {
+      position: relative;
+      width: 100%;
+      height: calc(var(--h) * 1px);
+      overflow: hidden;
+      transform-origin: 50% 100%;         /* 按压时以"站在搁板上"的底边为支点 */
+      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
     /* 极轻的按压态（与书脊/卡片同款）——有意加的即时反馈，不要"修复"掉 */
-    .slot:active { transform: scale(0.99); }
+    .bay:active .slot { transform: scale(0.99); }
+
+    /* 脚下的小日期：搁板线下方、对准筒身居中（像标本柜里标本脚下的标签）；
+       没写日期的卷这行不渲染。同排内按时间从左到右排（靠 data.js 数组顺序） */
+    .bay-date {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: calc(var(--cw) * 1px);
+      padding-top: 12px;
+      text-align: center;
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+    }
 
     /* ── 筒身：两种剪影 ── */
     .can {
@@ -126,21 +130,26 @@
       align-items: center;
       justify-content: center;
     }
-    /* 135：竖排的"N EXP"（真实暗盒上就印着张数） */
+    /* 135：型号竖排印在筒身上（真实暗盒的印法）。
+       label 按空格拆行：每个词一列，从左往右读（vertical-lr） */
     .can-label-v {
-      writing-mode: vertical-rl;
-      font-size: 0.65rem;
-      letter-spacing: 0.35em;
+      writing-mode: vertical-lr;
+      text-align: center;
+      font-size: 0.62rem;
+      letter-spacing: 0.28em;
+      line-height: 1.7;
     }
-    /* 120：横贴在纸封腰带上的标签 */
+    /* 120：型号横贴在纸封腰带的标签上，label 按空格拆行 */
     .can-band {
       width: 100%;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 4px 0;
-      font-size: 0.65rem;
-      letter-spacing: 0.25em;
+      padding: 5px 0;
+      font-size: 0.62rem;
+      letter-spacing: 0.2em;
+      line-height: 1.5;
     }
 
     /* ── 片头（leader）：从筒身右侧抽出的一截胶片，含这卷第一张 ── */
@@ -182,13 +191,11 @@
     }
     .leader.f120 { padding: 7px 0; }      /* 120：无齿孔，上下素黑边 */
 
-    /* ── 打开某卷时：其余的筒淡出收拢，别的排整排淡出 ── */
+    /* ── 打开某卷时：其余的筒（连同脚下日期）淡出收拢，别的排整排淡出 ── */
     #cabinet.opening .film-row:not(.has-active) { opacity: 0; pointer-events: none; }
-    #cabinet.opening .row-label { opacity: 0; }
-    #cabinet.opening .slot:not(.active) {
+    #cabinet.opening .bay:not(.active) {
       opacity: 0;
       width: 0;
-      border-color: transparent;
       pointer-events: none;
     }
 
@@ -313,7 +320,7 @@
 
     /* 系统开了"减弱动态效果"：抽片头/居中位移不做动画，直接到位 */
     @media (prefers-reduced-motion: reduce) {
-      .slot     { transition: opacity 0.4s ease; }
+      .bay      { transition: opacity 0.4s ease; }
       .row-cans { transition: none; }
     }
   </style>
@@ -432,19 +439,16 @@
 
     var cabinet = document.getElementById('cabinet');
 
+    // 把筒身印字按空格拆行：'PORTRA 400' → 两行（135 竖排两列 / 120 腰带两行）
+    function labelLines(label) {
+      return (label || '').split(' ').map(function (word) {
+        return '<div>' + word + '</div>';
+      }).join('');
+    }
+
     rows.forEach(function (row) {
       var rowEl = document.createElement('div');
       rowEl.className = 'film-row border-b border-site-border';
-
-      // 型号标牌：型号名 + 这排有几卷
-      var label = document.createElement('div');
-      label.className = 'row-label';
-      label.innerHTML =
-        '<div class="font-display text-lg tracking-wide text-site-text">' + row.stock + '</div>' +
-        '<div class="text-xs tracking-widest text-site-muted mt-1">' +
-          row.rolls.length + (row.rolls.length > 1 ? ' ROLLS' : ' ROLL') +
-        '</div>';
-      rowEl.appendChild(label);
 
       // 这排的筒（触屏两步交互平移的就是这个容器）
       var cans = document.createElement('div');
@@ -455,28 +459,29 @@
         var dims = FORMAT_DIMS[roll.format] || FORMAT_DIMS['135'];
         var cover = roll.photos.length ? roll.photos[0].src : '';
 
-        var slot = document.createElement('div');
-        slot.className = 'slot';
-        slot.style.setProperty('--w',  dims.cw);
-        slot.style.setProperty('--h',  dims.h);
-        slot.style.setProperty('--cw', dims.cw);
-        slot.style.setProperty('--bh', dims.bh);
-        slot.style.setProperty('--sh', dims.sh);
+        // 仓位 = 筒 + 脚下的小日期；宽度动画、点击、浮现都在这一层
+        var bay = document.createElement('div');
+        bay.className = 'bay';
+        bay.style.setProperty('--w',  dims.cw);
+        bay.style.setProperty('--h',  dims.h);
+        bay.style.setProperty('--cw', dims.cw);
+        bay.style.setProperty('--bh', dims.bh);
+        bay.style.setProperty('--sh', dims.sh);
 
-        // 筒身：135 = 片轴头 + 竖排"N EXP"；120 = 纸封卷 + 横贴腰带标签
+        // 筒身：135 = 片轴头 + 竖排型号；120 = 纸封卷 + 型号横贴腰带（印字 = label 字段）
         var canInner;
         if (roll.format === '120') {
           canInner =
             '<div class="can-body bg-site-surface border border-site-border">' +
               '<div class="can-band bg-site-bg border-y border-site-border font-display text-site-muted">' +
-                roll.photos.length + ' EXP' +
+                labelLines(roll.label) +
               '</div>' +
             '</div>';
         } else {
           canInner =
             '<div class="can-knob bg-site-surface border border-site-border"></div>' +
             '<div class="can-body bg-site-surface border border-site-border">' +
-              '<div class="can-label-v font-display text-site-muted">' + roll.photos.length + ' EXP</div>' +
+              '<div class="can-label-v font-display text-site-muted">' + labelLines(roll.label) + '</div>' +
             '</div>';
         }
 
@@ -492,23 +497,26 @@
             '<div class="perf"></div>' +
           '</div>';
 
-        slot.innerHTML = leader + '<div class="can">' + canInner + '</div>';
+        bay.innerHTML =
+          '<div class="slot">' + leader + '<div class="can">' + canInner + '</div></div>' +
+          // 脚下小日期（没写就不渲染这行）
+          (roll.date ? '<div class="bay-date font-display text-site-muted">' + roll.date + '</div>' : '');
         // 135 的片头齿孔（120 的 .perf 留空即无齿孔）
         if (roll.format !== '120') {
-          slot.querySelectorAll('.perf').forEach(function (p) { buildHoles(p, 22); });
+          bay.querySelectorAll('.perf').forEach(function (p) { buildHoles(p, 22); });
         }
 
         // 点击：桌面（有光标）直接翻开；触屏走两步——先居中抽片头，再点才翻开
-        slot.addEventListener('click', function () {
-          if (isTouchMode() && previewSlot !== slot) {
-            previewRoll(slot, cans);
+        bay.addEventListener('click', function () {
+          if (isTouchMode() && previewSlot !== bay) {
+            previewRoll(bay, cans);
             return;
           }
-          openRoll(roll, slot, rowEl);
+          openRoll(roll, bay, rowEl);
         });
 
-        fluidReveal(slot);   // 滚动浮现：筒第一次进入视野时轻轻浮上来
-        cans.appendChild(slot);
+        fluidReveal(bay);   // 滚动浮现：筒第一次进入视野时轻轻浮上来
+        cans.appendChild(bay);
       });
 
       cabinet.appendChild(rowEl);
@@ -574,7 +582,7 @@
     document.addEventListener('click', function (e) {
       if (!previewSlot) return;
       if (reader.classList.contains('open')) return;
-      if (e.target.closest && e.target.closest('.slot')) return;
+      if (e.target.closest && e.target.closest('.bay')) return;
       clearPreview();
     });
 

@@ -1116,13 +1116,20 @@ var allArchive = {
 //   id:     唯一标识，与 assets/images/film/ 下的文件夹名完全一致（连字符，不要空格）
 //           命名习惯：型号缩写-序号，如 portra400-01、gold200-02
 //   stock:  胶卷型号全名（同一型号必须一字不差，否则会被分到两排）
+//           用在：分排依据 + 阅读视图的片边字和左上角
+//   label:  筒身印字（短版型号，大写，如 'PORTRA 400'）——型号只印在筒上，架子不设标牌
+//           每个空格 = 换一行（135 竖排两列 / 120 腰带两行）；每卷必填，不做自动缩写
 //   format: '135' 或 '120' —— 决定筒的造型（135 金属暗盒带片轴头 / 120 纸封卷）
 //           和阅读视图的片框（135 有齿孔 / 120 无齿孔）
 //   camera: 拍摄相机，可空（''）则不显示；一次性相机写 '一次性相机 · Fuji QuickSnap'
-//   date:   拍摄时间，可空（''）则不显示（忘了就空着，诚实比编造好）
+//   date:   拍摄时间，精确到月（如 '2024.06'）——显示在筒脚下的搁板线下方 + 阅读视图左上角；
+//           可空（''）则不显示（忘了就空着，诚实比编造好）
 //   photos: 照片数组，顺序 = 这卷的拍摄顺序（第一张 = 抽出片头预览时露出的那张）
 //           每张只放 src、alt 和可选 note（一句话页脚），与 Archive 同一哲学：
 //           想配完整文案（标题/日期/地点/器材）的照片应该进 Gallery。
+//
+// 排内顺序约定：同型号的卷按时间从左到右排（靠这个数组里的先后顺序，自己控制）——
+// 钟爱的型号那一排，本身就是一条时间线。
 //
 // 添加一卷的流程：
 //   1. 在 assets/images/film/ 下建文件夹，名字 = id（如 portra400-03）
@@ -1138,9 +1145,10 @@ var allFilms = [
   {
     id:     'portra400-01',
     stock:  'Kodak Portra 400',
+    label:  'PORTRA 400',
     format: '135',
     camera: '',
-    date:   '',
+    date:   '2023.04',
     photos: [
       { src: 'assets/images/archive/2025/1.jpeg', alt: '' },
       { src: 'assets/images/archive/2025/2.jpeg', alt: '' },
@@ -1156,9 +1164,10 @@ var allFilms = [
   {
     id:     'portra400-02',
     stock:  'Kodak Portra 400',
+    label:  'PORTRA 400',
     format: '120',
     camera: 'Pentax 67',
-    date:   '',
+    date:   '2024.06',
     photos: [
       { src: 'assets/images/archive/2025/9.jpeg', alt: '' },
       { src: 'assets/images/archive/2025/10.jpeg', alt: '' },
@@ -1172,9 +1181,10 @@ var allFilms = [
   {
     id:     'gold200-01',
     stock:  'Kodak Gold 200',
+    label:  'GOLD 200',
     format: '135',
     camera: '',
-    date:   '',
+    date:   '2024.11',
     photos: [
       { src: 'assets/images/archive/2025/15.jpeg', alt: '' },
       { src: 'assets/images/archive/2025/16.jpeg', alt: '' },
@@ -1190,6 +1200,7 @@ var allFilms = [
   {
     id:     'gold200-02',
     stock:  'Kodak Gold 200',
+    label:  'GOLD 200',
     format: '135',
     camera: '',
     date:   '',
@@ -1207,9 +1218,10 @@ var allFilms = [
   {
     id:     'ektar100-01',
     stock:  'Kodak Ektar 100',
+    label:  'EKTAR 100',
     format: '135',
     camera: '',
-    date:   '',
+    date:   '2025.02',
     photos: [
       { src: 'assets/images/archive/2024/1.jpeg', alt: '' },
       { src: 'assets/images/archive/2024/2.jpeg', alt: '' },
@@ -1223,6 +1235,7 @@ var allFilms = [
   {
     id:     'superia400-01',
     stock:  'Fujicolor Superia X-TRA 400',
+    label:  'SUPERIA 400',
     format: '135',
     camera: '一次性相机 · Fuji QuickSnap',
     date:   '',
@@ -1239,9 +1252,10 @@ var allFilms = [
   {
     id:     'kodak800-01',
     stock:  'Kodak 800',
+    label:  'KODAK 800',
     format: '135',
     camera: '一次性相机 · Kodak FunSaver',
-    date:   '',
+    date:   '2023.08',
     photos: [
       { src: 'assets/images/archive/2024/13.jpeg', alt: '' },
       { src: 'assets/images/archive/2024/14.jpeg', alt: '' },
