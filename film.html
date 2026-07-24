@@ -131,9 +131,11 @@
       justify-content: center;
     }
     /* 135：型号竖排印在筒身上（真实暗盒的印法）。
-       label 按空格拆行：每个词一列，从左往右读（vertical-lr） */
+       label 按空格拆行；vertical-rl + rotate(180deg) = 字底朝上、
+       从下往上读，且第一个词（字母）在左列、数字在右列 */
     .can-label-v {
-      writing-mode: vertical-lr;
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
       text-align: center;
       font-size: 0.62rem;
       letter-spacing: 0.28em;
@@ -152,7 +154,25 @@
       line-height: 1.5;
     }
 
-    /* ── 片头（leader）：从筒身右侧抽出的一截胶片，含这卷第一张 ── */
+    /* ── 片头舌（tongue）：135 常态就露出的一小截片头 ──
+       不与胶片同高、外端带弧度像个把手——刚拿到的新胶卷就是这样，
+       也是"这里能抽"的暗示。抽出片头（hover/预览/翻开）时它淡出，
+       由完整片头（leader）接管。 */
+    .tongue {
+      position: absolute;
+      left: calc(var(--cw) * 1px - 2px);
+      bottom: 16px;
+      width: 11px;
+      height: 30px;
+      border-radius: 0 5px 5px 0;
+      transition: opacity 0.2s ease;
+    }
+    @media (hover: hover) { .bay:hover .tongue { opacity: 0; } }
+    .bay.preview .tongue, .bay.active .tongue { opacity: 0; }
+
+    /* ── 片头（leader）：从筒身右侧抽出的一截胶片，含这卷第一张 ──
+       收起时隐藏（否则筒右侧留给片头舌的缝里会先漏出它的边），
+       抽出时随展宽渐显 */
     .leader {
       position: absolute;
       left: calc(var(--cw) * 1px - 2px);  /* 与筒身衔接（盖掉一条描边） */
@@ -161,7 +181,11 @@
       height: calc(var(--sh) * 1px);
       display: flex;
       flex-direction: column;
+      opacity: 0;
+      transition: opacity 0.25s ease 0.05s;
     }
+    @media (hover: hover) { .bay:hover .leader { opacity: 1; } }
+    .bay.preview .leader, .bay.active .leader { opacity: 1; }
     /* 齿孔带（135 专用；120 的片头没有齿孔，用 padding 留出素黑边） */
     .perf {
       flex-shrink: 0;
@@ -408,10 +432,13 @@
   <script src="fluid.js"></script>
   <script>
     // ── 两种制式的筒身几何（抽象拟物：剪影 = 制式）──────────────
-    //   cw = 筒身宽 / bh = 筒身高 / h = 筒总高（含 135 的片轴头）/ sh = 片头高
+    //   cw = 筒身宽 / bh = 筒身高 / h = 筒总高（含 135 的片轴头）
+    //   sh = 片头高（120 胶片更宽，片头也更高）
+    //   w  = 仓位收起宽度（135 比筒身宽一点，给常态露出的片头舌留缝）
+    var TONGUE_W = 14;
     var FORMAT_DIMS = {
-      '135': { cw: 54, bh: 84, h: 94, sh: 78 },
-      '120': { cw: 62, bh: 74, h: 74, sh: 66 },
+      '135': { cw: 54, bh: 80, h: 90, sh: 72, w: 54 + TONGUE_W },
+      '120': { cw: 56, bh: 98, h: 98, sh: 88, w: 56 },
     };
     var LEADER_W = 190;   // 片头抽出的长度（与 CSS 里的展开宽度一致）
 
@@ -462,26 +489,28 @@
         // 仓位 = 筒 + 脚下的小日期；宽度动画、点击、浮现都在这一层
         var bay = document.createElement('div');
         bay.className = 'bay';
-        bay.style.setProperty('--w',  dims.cw);
+        bay.style.setProperty('--w',  dims.w);
         bay.style.setProperty('--h',  dims.h);
         bay.style.setProperty('--cw', dims.cw);
         bay.style.setProperty('--bh', dims.bh);
         bay.style.setProperty('--sh', dims.sh);
 
         // 筒身：135 = 片轴头 + 竖排型号；120 = 纸封卷 + 型号横贴腰带（印字 = label 字段）
+        // 配色：筒身用 site-border 打底、site-muted 半透明描边——比背景暖白深一档，
+        // "实物"从纸面上立出来（Archive 的书是纸质用 surface，胶卷是金属/纸筒用更深一档）
         var canInner;
         if (roll.format === '120') {
           canInner =
-            '<div class="can-body bg-site-surface border border-site-border">' +
-              '<div class="can-band bg-site-bg border-y border-site-border font-display text-site-muted">' +
+            '<div class="can-body bg-site-border border border-site-muted/50">' +
+              '<div class="can-band bg-site-bg border-y border-site-muted/40 font-display text-site-text/75">' +
                 labelLines(roll.label) +
               '</div>' +
             '</div>';
         } else {
           canInner =
-            '<div class="can-knob bg-site-surface border border-site-border"></div>' +
-            '<div class="can-body bg-site-surface border border-site-border">' +
-              '<div class="can-label-v font-display text-site-muted">' + labelLines(roll.label) + '</div>' +
+            '<div class="can-knob bg-site-border border border-site-muted/50"></div>' +
+            '<div class="can-body bg-site-border border border-site-muted/50">' +
+              '<div class="can-label-v font-display text-site-text/75">' + labelLines(roll.label) + '</div>' +
             '</div>';
         }
 
@@ -497,8 +526,11 @@
             '<div class="perf"></div>' +
           '</div>';
 
+        // 片头舌：135 常态露出的一小截（放在 leader 之前，抽出时被完整片头盖住/接替）
+        var tongue = (roll.format === '120') ? '' : '<div class="tongue bg-site-text"></div>';
+
         bay.innerHTML =
-          '<div class="slot">' + leader + '<div class="can">' + canInner + '</div></div>' +
+          '<div class="slot">' + tongue + leader + '<div class="can">' + canInner + '</div></div>' +
           // 脚下小日期（没写就不渲染这行）
           (roll.date ? '<div class="bay-date font-display text-site-muted">' + roll.date + '</div>' : '');
         // 135 的片头齿孔（120 的 .perf 留空即无齿孔）
