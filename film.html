@@ -124,11 +124,19 @@
     }
     /* 筒身主体（135 高、120 矮胖，高度由 JS 按制式写入 --bh） */
     .can-body {
+      position: relative;                 /* 真实壳模式的上下金属盖用绝对定位贴边 */
       width: 100%;
       height: calc(var(--bh) * 1px);
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+    /* 真实壳模式：135 暗盒上下两端的金属压盖 */
+    .can-cap {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 9px;
     }
     /* 135：型号竖排印在筒身上（真实暗盒的印法）。
        label 按空格拆行；vertical-rl + rotate(180deg) = 字底朝上、
@@ -440,6 +448,24 @@
     };
     var LEADER_W = 190;   // 片头抽出的长度（与 CSS 里的展开宽度一致）
 
+    // ── 🧪 实验开关：真实胶片壳配色 ─────────────────────────────
+    // true  = 筒身穿上各型号的真实品牌配色（Portra 奶白+橙、Gold 金黄+红…）
+    // false = 回到全站抽象灰调（site-border 底 + muted 描边）
+    // 只换"皮肤"：几何、剪影、交互、数据全部不变，随时一行切回。
+    var REAL_SHELLS = true;
+
+    // 各型号的品牌色（键 = data.js 里的 stock 全名；查不到的型号自动回退抽象灰调）。
+    // ⚠️ 这里是全站唯一允许硬编码颜色的地方：胶卷的品牌色属于"内容"而非设计系统，
+    //    就像照片本身有颜色一样——设计系统的规矩管的是界面，不管展品。
+    var SHELL_STYLES = {
+      'Kodak Portra 400':            { body: '#f2ecdd', text: '#3f3a33', accent: '#e07b25', bandText: '#ffffff' },
+      'Kodak Gold 200':              { body: '#efc93f', text: '#43391f', accent: '#c8342b', bandText: '#ffffff' },
+      'Kodak Ektar 100':             { body: '#f4f1ea', text: '#c8342b', accent: '#1f4e9c', bandText: '#ffffff' },
+      'Fujicolor Superia X-TRA 400': { body: '#14724a', text: '#f2f2ef', accent: '#f0b32a', bandText: '#14724a' },
+      'Kodak 800':                   { body: '#efc93f', text: '#43391f', accent: '#c8342b', bandText: '#ffffff' },
+    };
+    var SHELL_METAL = '#3f3d3a';   // 135 暗盒的金属端盖 / 片轴头颜色
+
     // ── 给一个容器填一排齿孔（多填一些，靠 overflow:hidden 居中裁掉）──
     function buildHoles(el, count) {
       for (var i = 0; i < count; i++) {
@@ -465,9 +491,11 @@
     var cabinet = document.getElementById('cabinet');
 
     // 把筒身印字按空格拆行：'PORTRA 400' → 两行（135 竖排两列 / 120 腰带两行）
-    function labelLines(label) {
-      return (label || '').split(' ').map(function (word) {
-        return '<div>' + word + '</div>';
+    // 真实壳模式下可分色：第一个词（字母）用 textColor，其余（数字）用 accentColor
+    function labelLines(label, textColor, accentColor) {
+      return (label || '').split(' ').map(function (word, i) {
+        var color = textColor ? (i === 0 ? textColor : accentColor) : '';
+        return '<div' + (color ? ' style="color:' + color + '"' : '') + '>' + word + '</div>';
       }).join('');
     }
 
@@ -494,22 +522,35 @@
         bay.style.setProperty('--sh', dims.sh);
 
         // 筒身：135 = 片轴头 + 竖排型号；120 = 纸封卷 + 型号横贴腰带（印字 = label 字段）
-        // 配色：筒身用 site-border 打底、site-muted 半透明描边——比背景暖白深一档，
-        // "实物"从纸面上立出来（Archive 的书是纸质用 surface，胶卷是金属/纸筒用更深一档）
+        // 两套皮肤（几何完全相同，只换颜色）：
+        //   真实壳（REAL_SHELLS 开且查到品牌色）= 品牌配色 + 金属端盖 + 分色印字
+        //   抽象灰调 = site-border 打底、site-muted 半透明描边——比背景深一档立出来
+        var st = REAL_SHELLS ? SHELL_STYLES[roll.stock] : null;
         var canInner;
         if (roll.format === '120') {
-          canInner =
-            '<div class="can-body bg-site-border border border-site-muted/50">' +
-              '<div class="can-band bg-site-bg border-y border-site-muted/40 font-display text-site-text/75">' +
-                labelLines(roll.label) +
-              '</div>' +
-            '</div>';
+          canInner = st
+            ? '<div class="can-body" style="background:' + st.body + ';border:1px solid rgba(0,0,0,0.22)">' +
+                '<div class="can-band font-display" style="background:' + st.accent + ';border-top:1px solid rgba(0,0,0,0.15);border-bottom:1px solid rgba(0,0,0,0.15)">' +
+                  labelLines(roll.label, st.bandText, st.bandText) +
+                '</div>' +
+              '</div>'
+            : '<div class="can-body bg-site-border border border-site-muted/50">' +
+                '<div class="can-band bg-site-bg border-y border-site-muted/40 font-display text-site-text/75">' +
+                  labelLines(roll.label) +
+                '</div>' +
+              '</div>';
         } else {
-          canInner =
-            '<div class="can-knob bg-site-border border border-site-muted/50"></div>' +
-            '<div class="can-body bg-site-border border border-site-muted/50">' +
-              '<div class="can-label-v font-display text-site-text/75">' + labelLines(roll.label) + '</div>' +
-            '</div>';
+          canInner = st
+            ? '<div class="can-knob" style="background:' + SHELL_METAL + ';border:1px solid rgba(0,0,0,0.35)"></div>' +
+              '<div class="can-body" style="background:' + st.body + ';border:1px solid rgba(0,0,0,0.22)">' +
+                '<div class="can-cap" style="top:0;background:' + SHELL_METAL + '"></div>' +
+                '<div class="can-label-v font-display">' + labelLines(roll.label, st.text, st.accent) + '</div>' +
+                '<div class="can-cap" style="bottom:0;background:' + SHELL_METAL + '"></div>' +
+              '</div>'
+            : '<div class="can-knob bg-site-border border border-site-muted/50"></div>' +
+              '<div class="can-body bg-site-border border border-site-muted/50">' +
+                '<div class="can-label-v font-display text-site-text/75">' + labelLines(roll.label) + '</div>' +
+              '</div>';
         }
 
         // 片头：这卷的第一张，嵌在小片框里（135 带齿孔 + 末端片头舌，120 素黑边无舌）
