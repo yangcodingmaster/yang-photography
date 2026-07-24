@@ -23,6 +23,9 @@
             'display': ['"Cormorant Garamond"', 'Georgia', 'serif'],
             'body':    ['"Cormorant Garamond"', 'Georgia', 'serif'],
             'zh':      ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
+            // 仅限"物体表面的印字"（筒身/腰带/片边字）：真实暗盒印的就是
+            // Helvetica 一路的工业无衬线，用系统栈零加载。界面文字仍用 Cormorant。
+            'shell':   ['"Helvetica Neue"', 'Arial', 'sans-serif'],
           },
         }
       }
@@ -75,8 +78,8 @@
                   opacity 0.4s ease;
     }
     /* hover 抽片头只给有光标的设备；触屏走两步交互（.preview 居中 → 再点翻开） */
-    @media (hover: hover) { .bay:hover { width: calc(var(--w) * 1px + 190px); } }
-    .bay.active, .bay.preview { width: calc(var(--w) * 1px + 190px); }
+    @media (hover: hover) { .bay:hover { width: calc(var(--w) * 1px + 220px); } }
+    .bay.active, .bay.preview { width: calc(var(--w) * 1px + 220px); }
 
     /* 筒的裁切窗：筒身固定在左缘，片头藏在筒身右侧，靠 overflow:hidden 裁掉；
        bay 展宽的过程就是"片头被抽出来" */
@@ -117,8 +120,8 @@
     }
     /* 135 暗盒的片轴头：从筒顶伸出的一小截轴 */
     .can-knob {
-      width: 16px;
-      height: 10px;
+      width: 18px;
+      height: 12px;
       border-radius: 3px 3px 0 0;
       margin-bottom: -1px;                /* 与筒身描边贴合 */
     }
@@ -136,7 +139,7 @@
       position: absolute;
       left: 0;
       right: 0;
-      height: 9px;
+      height: 10px;
     }
     /* 真实壳模式：壳身侧面的品牌色竖条（柯达 Professional 系的柯达黄） */
     .can-stripe {
@@ -144,17 +147,18 @@
       left: 0;
       top: 0;
       bottom: 0;
-      width: 14px;
+      width: 16px;
     }
     /* 135：型号竖排印在筒身上（真实暗盒的印法）。
        label 按空格拆行；vertical-rl + rotate(180deg) = 字底朝上、
-       从下往上读，且第一个词（字母）在左列、数字在右列 */
+       从下往上读，且第一个词（字母）在左列、数字在右列。
+       字号是可读性下限：15 寸屏上要能一眼读出型号，别再调小 */
     .can-label-v {
       writing-mode: vertical-rl;
       transform: rotate(180deg);
       text-align: center;
-      font-size: 0.62rem;
-      letter-spacing: 0.28em;
+      font-size: 0.75rem;
+      letter-spacing: 0.22em;
       line-height: 1.7;
     }
     /* 120：型号横贴在纸封腰带的标签上，label 按空格拆行 */
@@ -164,9 +168,9 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 5px 0;
-      font-size: 0.62rem;
-      letter-spacing: 0.2em;
+      padding: 6px 0;
+      font-size: 0.75rem;
+      letter-spacing: 0.16em;
       line-height: 1.5;
     }
 
@@ -179,11 +183,11 @@
       position: absolute;
       left: calc(var(--cw) * 1px - 2px);  /* 与筒身衔接（盖掉一条描边） */
       bottom: 4px;
-      width: 190px;
+      width: 220px;
       height: calc(var(--sh) * 1px);
       display: flex;
       flex-direction: column;
-      transform: translateX(-190px);      /* 收起：整条藏进筒后 */
+      transform: translateX(-220px);      /* 收起：整条藏进筒后 */
       transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
     }
     @media (hover: hover) { .bay:hover .leader { transform: translateX(0); } }
@@ -193,32 +197,32 @@
        弧度像个把手，刚拿到的新胶卷就是这样，也是"这里能抽"的暗示 */
     .leader .tip {
       position: absolute;
-      right: -11px;
-      bottom: 12px;
-      width: 12px;
-      height: 30px;
-      border-radius: 0 5px 5px 0;
+      right: -12px;
+      bottom: 14px;
+      width: 13px;
+      height: 36px;
+      border-radius: 0 6px 6px 0;
     }
     /* 齿孔带（135 专用；120 的片头没有齿孔，用 padding 留出素黑边） */
     .perf {
       flex-shrink: 0;
       display: flex;
-      gap: 6px;
+      gap: 7px;
       justify-content: center;
       align-items: center;
       overflow: hidden;
-      height: 11px;
+      height: 13px;
     }
     .perf .hole {
       flex-shrink: 0;
-      width: 6px;
-      height: 4.5px;
+      width: 7px;
+      height: 5.5px;
       border-radius: 1.5px;
     }
     .leader .strip-img {
       flex: 1;
       min-height: 0;
-      margin: 0 10px;                     /* 左右露出片基的黑边 */
+      margin: 0 12px;                     /* 左右露出片基的黑边 */
       overflow: hidden;
     }
     .leader .strip-img img {
@@ -288,7 +292,7 @@
       align-items: center;
       gap: 2rem;
       padding: 3px 2px 7px;
-      font-size: 0.65rem;
+      font-size: 0.7rem;
       letter-spacing: 0.3em;
       text-transform: uppercase;
       opacity: 0.55;
@@ -418,7 +422,8 @@
     <div class="page-photo" id="page-photo">
       <div id="film-frame" class="bg-site-text">
         <div id="perf-a" class="perf"></div>
-        <div id="edge-band" class="font-display text-site-bg">
+        <!-- 片边字用 font-shell：真实底片边缘的印字就是无衬线（与筒身印字同一例外） -->
+        <div id="edge-band" class="font-shell text-site-bg">
           <span id="edge-stock"></span>
           <span id="edge-frame"></span>
         </div>
@@ -449,12 +454,13 @@
     //   cw = 筒身宽 / bh = 筒身高 / h = 筒总高（含 135 的片轴头）
     //   sh = 片头高（120 胶片更宽，片头也更高）
     //   w  = 仓位收起宽度（135 比筒身宽一点，给常态露出的片头舌留缝）
-    var TONGUE_W = 14;
+    // 尺寸整体放大过一轮：15 寸屏上要能直接读出筒身型号（作者要求，别缩回去）
+    var TONGUE_W = 16;
     var FORMAT_DIMS = {
-      '135': { cw: 54, bh: 80, h: 90, sh: 72, w: 54 + TONGUE_W },
-      '120': { cw: 56, bh: 98, h: 98, sh: 88, w: 56 },
+      '135': { cw: 68, bh: 100, h: 112, sh: 88, w: 68 + TONGUE_W },
+      '120': { cw: 70, bh: 122, h: 122, sh: 108, w: 70 },
     };
-    var LEADER_W = 190;   // 片头抽出的长度（与 CSS 里的展开宽度一致）
+    var LEADER_W = 220;   // 片头抽出的长度（与 CSS 里的展开宽度一致）
 
     // ── 🧪 实验开关：真实胶片壳配色 ─────────────────────────────
     // true  = 筒身穿上各型号的真实品牌配色（Portra 奶白+橙、Gold 金黄+红…）
@@ -543,12 +549,12 @@
         if (roll.format === '120') {
           canInner = st
             ? '<div class="can-body" style="background:' + st.body + ';border:1px solid rgba(0,0,0,0.25)">' +
-                '<div class="can-band font-display" style="background:' + st.bandBg + ';border-top:1px solid rgba(0,0,0,0.15);border-bottom:1px solid rgba(0,0,0,0.15)">' +
+                '<div class="can-band font-shell" style="background:' + st.bandBg + ';border-top:1px solid rgba(0,0,0,0.15);border-bottom:1px solid rgba(0,0,0,0.15)">' +
                   labelLines(roll.label, st.bandText, st.bandText) +
                 '</div>' +
               '</div>'
             : '<div class="can-body bg-site-border border border-site-muted/50">' +
-                '<div class="can-band bg-site-bg border-y border-site-muted/40 font-display text-site-text/75">' +
+                '<div class="can-band bg-site-bg border-y border-site-muted/40 font-shell text-site-text/75">' +
                   labelLines(roll.label) +
                 '</div>' +
               '</div>';
@@ -559,14 +565,14 @@
                 (st.stripe ? '<div class="can-stripe" style="background:' + st.stripe + '"></div>' : '') +
                 '<div class="can-cap" style="top:0;background:' + SHELL_DARK + '"></div>' +
                 // 有侧竖条时印字往右让开，仍在剩余区域内居中
-                '<div class="can-label-v font-display"' + (st.stripe ? ' style="margin-left:14px"' : '') + '>' +
+                '<div class="can-label-v font-shell"' + (st.stripe ? ' style="margin-left:16px"' : '') + '>' +
                   labelLines(roll.label, st.text, st.num || st.text) +
                 '</div>' +
                 '<div class="can-cap" style="bottom:0;background:' + SHELL_DARK + '"></div>' +
               '</div>'
             : '<div class="can-knob bg-site-border border border-site-muted/50"></div>' +
               '<div class="can-body bg-site-border border border-site-muted/50">' +
-                '<div class="can-label-v font-display text-site-text/75">' + labelLines(roll.label) + '</div>' +
+                '<div class="can-label-v font-shell text-site-text/75">' + labelLines(roll.label) + '</div>' +
               '</div>';
         }
 
