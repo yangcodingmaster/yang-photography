@@ -4,3 +4,7 @@ out
 .env*.local
 .DS_Store
 *.log
+
+# 留言表单：带真密钥的配置该在服务器的 /www/site-secrets/config.php，
+# 万一哪天在本地建了同名文件，别让它进 git（config.sample.php 是模板，可以进）
+api/config.php
