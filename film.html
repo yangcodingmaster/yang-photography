@@ -65,6 +65,20 @@
        这里只写几何、层叠和过渡——设计系统仍是唯一的颜色来源。
        ════════════════════════════════════════════════════════ */
 
+    /* ── 锁住页面宽度（手机端 bug 修复）──────────────────────────
+       一排筒是不换行的 flex 行，某个筒抽出片头时整行会撑过容器
+       （实测：120 那排溢出 131px，135 的片头 220px 溢出更多）。
+       body 上本来就有 overflow-x-hidden，桌面 Chrome 能兜住，
+       但 **iOS Safari 兜不住**——那边负责滚动的是 html 元素，
+       只给 body 设是出了名的拦不住，结果就是整个网站被拉宽。
+       所以 html 也要设。
+
+       ⚠️ 别改成"给 .film-row 加 overflow:hidden 就地裁掉"：
+       触屏居中逻辑会把展开的筒推到屏幕中间，那时它本来就该伸出
+       这一排的盒子外面，就地裁会把片头切掉。
+       裁切必须发生在视口这一层，不能在排这一层。 */
+    html, body { overflow-x: hidden; }
+
     /* ── 柜子：一排排搁板，每排一个型号 ── */
     #cabinet {
       display: flex;
@@ -83,6 +97,11 @@
       display: flex;
       align-items: flex-end;
       gap: 14px;
+      /* 筒底与搁板线之间留一点缝，别让筒"焊"在线上，视觉上透气些。
+         ⚠️ 改这个值要同时改 .bay-date 的 padding-top——日期是按
+         "从筒底往下多少"定位的，线一动、两者的间距就变了。
+         关系：日期到线的距离 = .bay-date 的 padding-top − 这里的 padding-bottom */
+      padding-bottom: 8px;
       transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
@@ -120,7 +139,9 @@
       top: 100%;
       left: 0;
       width: calc(var(--cw) * 1px);
-      padding-top: 12px;
+      /* 20 = 8（筒底到搁板线，见 .row-cans 的 padding-bottom）+ 12（线到日期）。
+         这样搁板线挪下去之后，日期到线的距离还是原来那 12px */
+      padding-top: 20px;
       text-align: center;
       font-size: 0.68rem;
       letter-spacing: 0.12em;
@@ -628,13 +649,31 @@
           bay.querySelectorAll('.perf').forEach(function (p) { buildHoles(p, 22); });
         }
 
-        // 点击：桌面（有光标）直接翻开；触屏走两步——先居中抽片头，再点才翻开
-        bay.addEventListener('click', function () {
-          if (isTouchMode() && previewSlot !== bay) {
+        // ── 点击行为：桌面和触屏走两套 ──────────────────────────────
+        //
+        // 桌面（有光标）：hover 已经把片头抽出来了，点哪儿都是进阅读视图。
+        //
+        // 触屏（没光标）：分两步，而且第二步按"点在什么实物上"分流——
+        //   第一击（这卷还没抽出来）→ 推到屏幕中心 + 抽出片头
+        //   第二击点那截胶片          → 进全屏阅读（"我要看这个"）
+        //   第二击点胶卷盒            → 把片头收回盒里（"看完了，放回去"）
+        // 盒子在两种状态下含义不同（没抽出=抽出来 / 已抽出=收回去），
+        // 这是有意的：动作对象是同一个实物，方向由它当前的状态决定。
+        bay.addEventListener('click', function (e) {
+          if (!isTouchMode()) {
+            openRoll(roll, bay, rowEl);
+            return;
+          }
+          if (previewSlot !== bay) {
             previewRoll(bay, cans);
             return;
           }
-          openRoll(roll, bay, rowEl);
+          // 片头已抽出：点胶片进全屏，点别的地方（盒子、脚下日期）收回
+          if (e.target.closest('.leader')) {
+            openRoll(roll, bay, rowEl);
+          } else {
+            clearPreview();
+          }
         });
 
         fluidReveal(bay);   // 滚动浮现：筒第一次进入视野时轻轻浮上来
