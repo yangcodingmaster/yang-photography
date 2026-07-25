@@ -587,8 +587,24 @@ rsync 增量同步到腾讯云，**只传变化的部分** —— 改几行文�
    （现在只有 `/www/site-secrets/config.php` 属于这类）
 2. **`api/README.md` 和 `api/config.sample.php` 被排除**，不上公网 ——
    它们不含密钥，但写着密钥存放路径和防护细节，没必要公开
-3. **rsync 以 root 跑，同步上去的文件属主是本地用户 ID（501）而非 `www`**。
-   权限 644 所以 Nginx / PHP 读得到，功能正常；想归位可加 `--chown=www:www`
+3. **同步完会自动把文件属主归位成 `www:www`**（脚本末尾补了一条 `chown`）。
+   正规做法是给 rsync 加 `--chown=www:www`，但那是 rsync 3.1 的参数，
+   而 **macOS 自带的 rsync 停在 2.6.9（2006 年）没有它**，所以改成传完补一刀
+
+### SSH 加固（2026-07-26 做的，换服务器时要重做）
+
+密码登录已关闭，只认密钥。配置在 `/etc/ssh/sshd_config.d/00-hardening.conf`。
+
+**⚠️ 为什么文件名必须以 `00` 开头**：主配置第 15 行有
+`Include /etc/ssh/sshd_config.d/*.conf`，这些文件按文件名顺序读取，
+而 **sshd 的规则是"同一项最先出现的生效"**。系统自带的 `50-cloud-init.conf`
+里写着 `PasswordAuthentication yes` —— 往主文件末尾加一行是**完全无效的**，
+必须排在它前面才能覆盖。改完务必用 `sshd -T | grep passwordauthentication`
+确认真的生效，别只看自己写了什么。
+
+- 改回去：删掉 `00-hardening.conf` → `systemctl reload sshd`
+- 备份在 `/root/ssh-backup-20260726-050007`
+- **万一 SSH 进不去**：用腾讯云控制台的 **VNC 登录**（不走 SSH），照样能改回来
 
 ### 服务器上已经配好的（换服务器时要重做）
 
@@ -597,7 +613,7 @@ rsync 增量同步到腾讯云，**只传变化的部分** —— 改几行文�
 | 站点 PHP 版本 | PHP-82（**不能是「纯静态」**，否则 .php 会被当文本吐出源码） |
 | 防跨站攻击 (open_basedir) | **已关闭** —— 开着的话 PHP 读不到站点目录外的密钥文件 |
 | `/www/site-secrets/config.php` | `640 root:www`，含 Resend key 和体检口令 |
-| SSH | 已配公钥免密登录（`deploy.sh` 依赖它） |
+| SSH | 公钥免密登录已配；**密码登录已关闭**（2026-07-26），只认密钥 |
 
 ### 备案通过后还剩三步
 
@@ -760,9 +776,6 @@ tailwind.config = {
 ### 待作者决定
 - [ ] **GitHub Pages 怎么处理** —— 现在是第二个线上副本且留言表单是坏的，
       见"两个线上副本"一节。建议关掉
-- [ ] 服务器 SSH 是否关闭密码登录 —— 2026-07-26 查得 `PasswordAuthentication yes`
-      且 24 小时内有 154 次密码爆破尝试。公钥登录已配好，关掉密码即可归零；
-      兜底是腾讯云控制台的 VNC 登录
 
 ### 待填文案（只有作者本人能做）
 - [ ] 各系列 `descZh` / `descEn`，照片 `caption` / `date` / `location` / `desc` / `meta`

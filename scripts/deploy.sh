@@ -50,6 +50,22 @@ echo
 if [ -n "$DRY_RUN" ]; then
   echo "演习结束。确认清单没问题后，去掉 --dry-run 再跑一次即可真正部署。"
 else
+  # ---------- 把文件属主归位成 www ----------
+  #
+  # Nginx 和 PHP 是以 www 这个身份在跑的，网站文件理应属于 www。
+  # 但 rsync 传过来的文件属主会是本机的用户编号（Mac 上是 501），
+  # 服务器上根本没有这个用户，显示出来是 "501:games" 这种看不懂的东西。
+  #
+  # 正规做法是给 rsync 加 --chown=www:www，但那是 rsync 3.1 才有的参数，
+  # 而 macOS 自带的 rsync 停留在 2.6.9（2006 年），没有这个参数。
+  # 所以改成传完之后在服务器上补一刀 chown，效果一样。
+  #
+  # 现在文件权限是 644（谁都能读），就算属主不对网站也能正常访问；
+  # 归位是为了防患：万一将来出现 640 权限的文件，属主不对 www 就读不到了，
+  # 而且宝塔的备份、权限修复等功能都默认网站文件属于 www。
+  echo "归位文件属主…"
+  ssh "${SERVER_USER}@${SERVER_IP}" "chown -R www:www '${REMOTE_DIR}'"
+
   echo "部署完成。"
   echo "备案通过前用 IP 查看：http://${SERVER_IP}"
   echo "备案通过后用域名查看：https://yangzhaophoto.com"
