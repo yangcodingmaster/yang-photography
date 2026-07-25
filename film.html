@@ -261,6 +261,20 @@
     }
     #reader.open { opacity: 1; pointer-events: auto; }
 
+    /* 卷信息"展签"：竖排立在照片左侧的留白里、垂直居中，像画作旁的说明牌。
+       比原来角落里的一细行更容易被看到，又不抢照片的主角位。 */
+    #reader-title {
+      left: 3rem;
+      top: 50%;
+      transform: translateY(-50%);
+      line-height: 2.1;
+      max-width: 12rem;                   /* 太长的相机/镜头名换行，不侵入照片 */
+    }
+    /* 窄屏（照片会占满宽度、左侧没有留白）：收回到左上角，仍是竖排三行 */
+    @media (max-width: 1100px) {
+      #reader-title { left: 2rem; top: 1.75rem; transform: none; }
+    }
+
     /* 照片区：占满页脚以上的全部空间，片框整体居中 */
     .page-photo {
       flex: 1;
@@ -413,8 +427,8 @@
   <!-- 背景纯不透明纸面（不加模糊），与 gallery / series / archive 一致 -->
   <div id="reader" class="fixed inset-0 z-[100] bg-site-bg">
 
-    <!-- 左上角：这卷是什么（型号 · 相机 · 时间，结束卡视图里清空） -->
-    <div id="reader-title" class="absolute top-6 left-8 text-sm text-site-muted font-display tracking-widest z-10"></div>
+    <!-- 左侧展签：这卷是什么（型号/相机/镜头/日期，竖排三行，结束卡视图里清空） -->
+    <div id="reader-title" class="absolute text-sm text-site-muted font-display tracking-widest z-10"></div>
 
     <!-- 出口（右上角）：与全站一致的"展览出口"指示牌 -->
     <button id="reader-close"
@@ -781,11 +795,12 @@
       edgeFrame.textContent = (currentIndex + 1) + (currentRoll.format === '120' ? '' : 'A');
       pageNote.textContent  = p.note || '';
       pageFolio.textContent = (currentIndex + 1) + ' / ' + photos.length;
-      // 左上角：这卷是什么（空字段自动跳过）
+      // 左侧展签：这卷是什么（型号 / 相机 / 镜头 / 日期，各占一行，空字段跳过）
       // 胶片一卷用固定的相机 + 镜头 + 胶片，所以这些信息挂在卷这一级、
-      // 只在开头显示一次，不必在每张照片下面重复
-      readerTitle.textContent = [currentRoll.stock, currentRoll.camera, currentRoll.lens, currentRoll.date]
-        .filter(function (s) { return s; }).join(' · ');
+      // 竖排成一块"说明牌"立在照片左侧，只在开头显示一次，不在每张照片下重复
+      readerTitle.innerHTML = [currentRoll.stock, currentRoll.camera, currentRoll.lens, currentRoll.date]
+        .filter(function (s) { return s; })
+        .map(function (s) { return '<div>' + s + '</div>'; }).join('');
     }
 
     // ── 手势 + 翻页动画：全部交给 fluid.js 的滑动控制器 ──────────

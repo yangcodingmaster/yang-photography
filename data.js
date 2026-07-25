@@ -1339,7 +1339,7 @@ var allFilms = [
     stock:  'Fujifilm',
     label:  'FUJIFILM',
     format: '135',
-    camera: '一次性相机',
+    camera: 'FUJI film Quick Snap',
     lens:   '',
     date:   '2026.05',
     photos: [
