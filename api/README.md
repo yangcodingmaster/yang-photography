@@ -157,6 +157,21 @@ https://yangzhaophoto.com/api/guestbook.php?action=review&token=你的口令
 | 前端一律用 `textContent` 渲染 | 别人写的 `<script>` 只会当文字显示，不会被执行 |
 | 审核链接每条一个签名 | 某封邮件被转发出去，泄漏的也只是那一条的处置权 |
 
+## 想在本地先试试（可选）
+
+本地测试需要机器上有 PHP。macOS 13 现在没有现成的安装包（Homebrew 只能从源码
+编译整条依赖链，要一两个小时），所以**不装也完全没问题** —— 直接部署到服务器上，
+用第八步的体检和第九步的实测来验证，效果一样。
+
+真要在本地跑的话，装好 PHP 之后：
+
+```bash
+GUESTBOOK_DATA_DIR=/tmp/gb-test php -S localhost:8899 -t .
+```
+
+`GUESTBOOK_DATA_DIR` 这个环境变量会临时把数据目录指到别处，服务器上不设它，
+走的还是 `/www/guestbook-data`。记得先在 `/tmp/gb-test/` 里放一份 `config.php`。
+
 ## 备份
 
 留言全在一个文件里，备份就是复制它：

@@ -67,10 +67,23 @@ function reply_page($title, $note) {
     exit;
 }
 
-/** 读出整个留言文件（文件还不存在时返回空列表） */
+/**
+ * 读出整个留言文件（文件还不存在时返回空列表）。
+ *
+ * 这里也要加锁（共享锁，允许多个人同时读、但会等正在写的那个写完）：
+ * 写入是"清空再写"，如果恰好在这两步之间读，会读到半个文件，
+ * 解析失败就变成"一条留言都没有"。概率极小，但代价只是两行代码。
+ */
 function load_messages($file) {
     if (!file_exists($file)) return array();
-    $raw = file_get_contents($file);
+
+    $fp = @fopen($file, 'r');
+    if (!$fp) return array();
+    flock($fp, LOCK_SH);
+    $raw = stream_get_contents($fp);
+    flock($fp, LOCK_UN);
+    fclose($fp);
+
     if ($raw === false || trim($raw) === '') return array();
     $data = json_decode($raw, true);
     return is_array($data) ? $data : array();
@@ -137,10 +150,13 @@ function send_notification($cfg, $msg, $selfUrl) {
     $safeName = htmlspecialchars($msg['name'], ENT_QUOTES, 'UTF-8');
     $safeText = nl2br(htmlspecialchars($msg['text'], ENT_QUOTES, 'UTF-8'));
 
+    // 来源页可能是空的（前端没传），空就不写这半句，别出现"来自  页"
+    $from = $msg['page'] !== '' ? '（来自 ' . htmlspecialchars($msg['page']) . ' 页）' : '';
+
     $html =
         '<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:520px;line-height:1.7">'
       . '<p style="color:#8a8a85;font-size:13px;margin:0 0 16px">'
-      . '有人在你的摄影网站留言了（来自 ' . htmlspecialchars($msg['page']) . ' 页）</p>'
+      . '有人在你的摄影网站留言了' . $from . '</p>'
       . '<p style="margin:0 0 4px"><strong>' . $safeName . '</strong> '
       . '<span style="color:#8a8a85;font-size:13px">' . htmlspecialchars($msg['time']) . '</span></p>'
       . '<blockquote style="margin:8px 0 24px;padding:12px 16px;background:#f2f2ef;'
@@ -226,9 +242,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         reply_json(array('ok' => true, 'pending' => true));
     }
 
-    $name = isset($body['name']) ? trim($body['name']) : '';
-    $text = isset($body['text']) ? trim($body['text']) : '';
-    $page = isset($body['page']) ? trim($body['page']) : '';
+    // 先确认是字符串再处理：这是个公开接口，谁都能往里发东西。
+    // 机器人如果发的是 {"name": {...}} 这种，trim() 拿到数组会直接抛错、接口 500
+    $str = function ($v) { return is_string($v) ? trim($v) : ''; };
+
+    $name = $str(isset($body['name']) ? $body['name'] : '');
+    $text = $str(isset($body['text']) ? $body['text'] : '');
+    $page = $str(isset($body['page']) ? $body['page'] : '');
 
     if ($text === '') {
         reply_json(array('ok' => false, 'error' => '留言内容是空的'), 400);
