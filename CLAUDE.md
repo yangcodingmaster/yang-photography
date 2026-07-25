@@ -30,7 +30,8 @@
 | `series.html` 系列详情 | ✅ 完成 | 瀑布流网格 + 展览级 Lightbox + 分章支持 + 组图支持 |
 | `archive.html` Archive | ✅ 完成 | 书架式：每年一本书（书脊宽度=照片数），翻开逐页阅读（`book-style` 分支重构） |
 | `about.html` 关于页 | ✅ 完成 | 结构完成，文案为占位内容待替换 |
-| `data.js` 数据文件 | ✅ 完成 | Gallery 8 个系列（含 allSeries / allPhotos / allChapters）+ Archive 5 年（allArchive） |
+| `film.html` Film | ✅ 完成 | 胶卷柜式：每卷一个筒（135/120 两种剪影），抽片头预览 + 片框阅读视图（与 series 同构的图文面板）；已录入 7 卷真实胶卷 |
+| `data.js` 数据文件 | ✅ 完成 | Gallery 8 个系列（含 allSeries / allPhotos / allChapters）+ Archive 5 年（allArchive）+ Film 7 卷真实胶卷（allFilms，共 181 张） |
 | Gallery 系列 | ✅ 上线 | 见下方"Gallery 系列清单"，共 8 个，约 200 张照片 |
 | Archive 散片 | ✅ 上线 | 2021–2025 五年，共 123 张（可选 note 一句话页脚，作者逐张手填） |
 | 图片压缩 | ✅ 完成 | 全部转为网页尺寸（HEIC→JPEG，长边 2560 / 质量 90） |
@@ -64,6 +65,7 @@
 ├── gallery.html            # 作品集：系列列表（每格是一个系列/文件夹）
 ├── series.html             # 系列详情页（通用，?id= 参数决定显示哪个系列）
 ├── archive.html            # Archive：书架式散片档案，每年一本书 + 翻开逐页阅读
+├── film.html               # Film：胶卷柜式胶卷档案，每卷一个筒 + 抽片头预览 + 片框阅读
 ├── about.html              # 关于页：个人介绍 + 联系方式
 │
 ├── favicon.ico             # 浏览器标签页图标（16/32/48 三个尺寸打包在一个文件里）
@@ -71,8 +73,8 @@
 │                           #    这两个由 scripts/make-share-card.sh 生成，别手改
 │
 ├── data.js                 # ⭐ 唯一的数据文件，所有内容只改这里
-│                           #    包含：allSeries、allPhotos、allChapters、allArchive
-├── fluid.js                # 弹簧动画 + 滑动手势引擎（零依赖手写，series Lightbox 与 archive 阅读视图共用）
+│                           #    包含：allSeries、allPhotos、allChapters、allArchive、allFilms
+├── fluid.js                # 弹簧动画 + 滑动手势引擎（零依赖手写，series / archive / film 三处阅读视图共用）
 │
 ├── scripts/                # 维护脚本（不是网站的一部分，不影响访客）
 │   ├── share-card.html     #    分享缩略图的"模具"，浏览器截图用
@@ -98,8 +100,15 @@
 │       │   ├── photos-of-2024/               # 分章系列（3 章子文件夹）
 │       │   └── photos-of-2023/               # 分章系列（4 章子文件夹）
 │       │       # 封面统一由 data.js 的 cover 字段指定（不限定第一张）
-│       └── archive/                # Archive 散片，按年份归档
-│           ├── 2021/  2022/  2023/  2024/  2025/
+│       ├── archive/                # Archive 散片，按年份归档
+│       │   ├── 2021/  2022/  2023/  2024/  2025/
+│       └── film/                   # Film 胶卷档案，每卷一个文件夹（文件夹名 = allFilms 的 id）
+│           ├── README.txt                    # 命名规则说明（给作者看）
+│           │   # 文件夹名 = 年月-型号-格式（连字符），照片按拍摄顺序 01.jpeg、02.jpeg…
+│           ├── 2403-gold200-120/  2403-gold200-135/   # 2024.03 Gold 200（120 + 135）
+│           ├── 2405-gold200-120/  2405-gold200-135/   # 2024.05 Gold 200
+│           ├── 2512-portra400-135/                     # 2025.12 Portra 400
+│           └── 2605-fujifilm-135/  2607-portra400-135/ # 2026.05 富士 / 2026.07 Portra 400
 │
 ├── .claude/
 │   └── skills/
@@ -126,7 +135,7 @@
 - 全 data.js 随机抽取（含 Gallery / Archive 所有照片，含组图拆开）
 - 两张 `<img>` 叠层做交叉淡入淡出，HOLD_MS=4500、FADE_MS=1200（顶部 JS 常量，可调）
 - 照片有 1px 黑色描边
-- 导航融入纸面（无背景无分割线），全英文：Yang · Gallery · Archive · About
+- 导航融入纸面（无背景无分割线），全英文：Yang · Gallery · Archive · Film · About（全站六个页面同此顺序）
 
 ### 作品集页 `gallery.html`
 - 头部：英文大标题 `Gallery` 在上、中文小灰 `作品集` 在下，下方一条**左对齐短分割线**（`w-20`，不横跨全宽），与 Archive 头部同构
@@ -181,6 +190,64 @@
   - 键盘 ← → 翻页、Esc 合上；照片区点击左半边往回/右半边往后
   - **流体手势**（fluid.js）：与 series.html 完全一致的 1:1 跟手拖拽 + 橡皮筋 + 惯性决策；结束卡上用力一甩 = 合上书
 - 年份内顺序 = 数组顺序：把新照片放数组前面 = 最新在最前面；封面图 = 当年数组第一张
+
+### Film 页 `film.html`（胶卷柜式）
+- 胶卷档案，与 Gallery / Archive 平级的第三种浏览维度：按物质载体看（一卷胶片 = 一个时间胶囊）
+- 数据来自 `data.js` 的 `allFilms`（数组，每个元素一卷）；页面自动按 `stock` 分组成一排排搁板，
+  排的顺序 = 型号在数组里首次出现的顺序
+- 头部：英文大标题 `Film` + 中文小灰 `胶卷档案`，左对齐短分割线（与 Gallery / Archive 同构）
+- **抽象拟物**（与书架式 Archive 同一哲学，不画写实质感）：
+  - **筒的剪影 = 画幅制式**：135 = 金属暗盒（带片轴头），120 = 纸封卷（腰带标签）；
+    **120 比 135 高**（真实比例感：120 胶片更宽）
+  - **筒身配色比背景深一档**：`site-border` 打底 + `site-muted` 半透明描边（Archive 的书是纸
+    用 `site-surface`，胶卷是金属/纸筒，用更深一档立出来——对比度是有意调过的，别调回去）
+  - **真实胶片壳配色**（film.html 里 `REAL_SHELLS` 开关，当前 `true`，作者已认可采纳）：
+    按真实暗盒扁平化——柯达 Professional 系（Portra 400/800、Ektar）= 黑壳 + 柯达黄侧竖条
+    + 白字；Gold = 金黄壳黑字（数字金红）；Superia = 富士绿壳白字；135 两端黑压盖。
+    只换皮肤，几何交互不变；改 `false` 一行回抽象灰调。`SHELL_STYLES` 按 stock 全名查色，
+    查不到自动回退灰调；**品牌色是全站唯一允许硬编码颜色的例外**（属于内容而非设计系统）。
+    ⚠️ 加新型号（表里没有的）需在 `SHELL_STYLES` 补一行配色，否则那卷显示为灰调回退
+  - **型号只印在筒身上**（`label` 字段，按空格拆行：135 竖排两列 / 120 腰带两行），
+    **不设排标牌、不印张数**——字越少越好，架子上只有实物
+  - **物体表面的印字用 `font-shell`（系统无衬线栈）**，界面文字仍是 Cormorant——
+    划界原则见"禁止做"里的字体例外条目；**筒身尺寸和印字字号（12px）是可读性下限**：
+    作者要求 15 寸屏上能直接读出型号，别缩小
+  - 135 竖排字**倒转 180°**（`vertical-rl + rotate(180deg)`）：字底朝上、从下往上读，
+    字母列在左、数字列在右（作者指定的方向，别"扶正"）
+  - **135 常态露出一小截片头舌**（`.leader .tip`：不与胶片同高、外端带弧度像把手——新胶卷
+    就是这样，也是"这里能抽"的暗示）；**舌是片头条的末端、同一个实物**：完整片头收起时
+    整条藏在筒身后（筒身不透明盖住），只露舌尖；抽出 = 整条 translateX 滑出、舌尖一路
+    在最前端（与 bay 展宽同一条缓动曲线）——不是"舌消失、另一条出现"的两个物件
+  - **拍摄时间 = 筒脚下的小灰字**（搁板线下方、对准筒身，像标本柜的标签；没写就不渲染）；
+    **排内约定按时间从左到右**（靠 allFilms 数组顺序）——钟爱型号的那一排就是一条时间线
+  - hover / 触屏第一击 = **从筒里抽出一截片头**（暗色底片 + 第一张照片；135 带齿孔、120 素黑边），
+    邻筒被自然挤开——对应 Archive 书脊的展宽露封面
+  - 触屏两步交互与 Archive 同构：第一击把这卷推到屏幕中心（平移的是本排的筒容器）、再点才翻开；
+    点其他筒切换预览、点空白收回；桌面不做居中位移（同 Archive 的理由）
+  - 筒有极轻按压态（scale 0.99，支点在底边）；滚动浮现（fluidReveal）
+  - ⚠️ 片头封面图**不能加 `loading="lazy"`**：片头藏在 overflow:hidden 里被视作不可见，
+    懒加载永不触发，fluidReveal 等不到图片解码、筒就永远不浮现（已踩过的坑）
+- 点击筒 = **翻开进入片框阅读视图**（一次一格，**图文布局与 series.html 的 Lightbox 同构**）：
+  - **片框在左、说明面板在右、垂直居中**（`#view-photo` = `flex md:flex-row items-center`，
+    与 series 的 `view-photo` 一套写法）；拖动翻页时**图文整体（片框+面板）一起位移**
+    （fluid.js 的 `getView()` 返回 `#view-photo`，与 series 完全一致）
+  - 照片嵌在深色片框（`bg-site-text`）里：135 上下两排齿孔；120 无齿孔、素黑宽边（`f120` 类）
+  - **片边字**：型号在左（大写 + 拉宽字距），画格编号在右（135 带 A 如 `3A`——真实底片写法；120 纯数字）
+  - **竖片自适应**：照片加载后按 naturalWidth/Height 判断，竖片时齿孔转到左右两侧、片边字横贯顶部
+    （物理底片上竖片是横躺的，完全还原就得歪头看——拟物让位于可用性）
+  - 片框 CSS 关键点：齿孔带用 `width:0 + min-width:100%` 不参与格宽计算（预填几十颗齿孔会把格子撑满全屏）；
+    片框 + 图片 `max-width:100%` 跟随片框区（`flex-1`），别压到右侧面板（这是 gallery 式布局后的约束）
+  - **右侧说明面板层次**（与 series 的文字面板同构，空字段靠 `:empty` 自动隐藏）：
+    `title`（作品名，作者自定义，大标题=相当于 series 的 caption）→
+    `desc`（这卷一句解释=相当于 series 的 desc）→
+    参数行「型号 · 相机 · 镜头 · 日期」（固定技术信息成组，相当于 series 的 meta "Sony α6700"）→
+    每格可选 `note`（那一格自己的一句话）。
+    **型号和日期不占标题位**（它们是固定技术信息，不是创作标题）——这是 film 和 gallery 的关键区别
+  - **左上角**：页码 `n / N`（与 series 计数器同位，拖动时不动）；**右上角** `→ Way out`；
+    无箭头按钮、无提示文字（全站约定）
+  - 120 抽出的片头是**正方形**（匹配 6×6 方画幅，`--lw` 按格式区分：135=220 长条 / 120=108 近方）
+  - 不循环 / 结束卡 `view-end` / 键盘 ← → Esc / 照片区左右半边点击 / 流体手势——全部与 series 一致
+- 卷内顺序 = 数组顺序 = 拍摄顺序；片头预览图 = 这卷数组第一张
 
 ### 关于页 `about.html`
 - 左侧个人照片（`assets/images/profile.jpg`），右侧双语介绍
@@ -265,6 +332,42 @@ Archive 故意没有 caption / date / location / desc / meta，因为它的定�
 note 是书架式改版后唯一的例外：一本书翻到某页时，页脚可以有作者的一句话（不是正经作品文案）。
 要给照片配完整文字（标题/日期/地点/器材），那它应该进 Gallery 而不是 Archive。
 
+### allFilms — Film 胶卷档案
+
+```javascript
+var allFilms = [
+  {
+    id:     '2512-portra400-135',       // 唯一标识 = assets/images/film/ 下的文件夹名
+                                        //   命名约定：年月-型号-格式（连字符，URL 安全）
+    stock:  'Kodak Portra 400',         // 胶卷型号全名；同型号必须一字不差，页面按它分排
+    label:  'PORTRA 400',               // 筒身印字（短版大写）；每个空格 = 换一行；每卷必填
+    format: '135',                      // '135' 或 '120'：决定筒的剪影和片框有无齿孔
+    camera: 'Canon EOS-1',              // 这卷用的相机；可空；一次性相机写 'FUJI film Quick Snap'
+    lens:   '',                         // 这卷用的镜头；可空（胶片一卷器材固定，忘了就空着）
+    date:   '2025.12',                  // 精确到月；显示在筒脚下 + 阅读视图参数行；可空
+    title:  '',                         // ⭐ 作品名（作者自定义 = 阅读视图大标题，相当于 gallery 的 caption）；可空
+    desc:   '',                         // ⭐ 这卷的一句解释（相当于 gallery 的 desc）；可空
+    photos: [
+      // 顺序 = 这卷的拍摄顺序；第一张 = 抽片头预览露出的那张
+      { src: 'assets/images/film/2512-portra400-135/01.jpeg', alt: '' },
+      // 可选 note：每格自己的一句话，显示在阅读视图面板底部
+      { src: 'assets/images/film/2512-portra400-135/02.jpeg', alt: '', note: '雨停之前' },
+    ],
+  },
+];
+```
+
+**阅读视图面板层次（与 series lightbox 同构）：**
+`title`（作品名，大标题）→ `desc`（解释）→ 参数行「型号 · 相机 · 镜头 · 日期」。
+—— 与 gallery 的区别：型号和日期是固定技术信息，不当作品名，成组放参数行；
+标题留给作者自定义的 `title`。所有可选字段留空则自动隐藏（`:empty`）。
+
+**关键约束：photos 里只放 src、alt 和可选 note**（每格一句话，与 Archive 同款）。
+卷级的创作文字用 `title` / `desc`，技术信息用 `stock` / `camera` / `lens` / `date`。
+
+**当前状态：已录入 7 卷真实胶卷共 181 张**（Gold 200 ×4、Portra 400 ×2、Fujifilm ×1），
+相机已填；`title` / `desc` / `lens` 留空待作者逐卷填。加新一卷见下方"如何往 Film 加一卷"。
+
 ### 组图写法（group）
 
 在 `allPhotos` 或章节的 `photos` 数组里：
@@ -298,6 +401,8 @@ note 是书架式改版后唯一的例外：一本书翻到某页时，页脚可
 | 照片故事/说明 | `data.js` → 每张的 `desc` |
 | 相机、胶卷信息 | `data.js` → 每张的 `meta` |
 | 章节标题 | `data.js` → `allChapters` 里对应章节的 `titleZh` / `titleEn` |
+| Film 某卷作品名 / 一句解释 | `data.js` → `allFilms` 对应卷的 `title` / `desc`（可留空） |
+| Film 某卷相机 / 镜头 | `data.js` → `allFilms` 对应卷的 `camera` / `lens`（一卷器材固定） |
 | 关于页自我介绍 | `about.html` 直接找中文段落修改 |
 | 网站标题（浏览器标签）| 各 `.html` 文件的 `<title>` 标签 |
 | 导航栏名字 "Yang" | 各 `.html` 文件的 `<nav>` 里的 Logo 链接 |
@@ -330,6 +435,18 @@ note 是书架式改版后唯一的例外：一本书翻到某页时，页脚可
    （放最前面 = 它成为这本书的封面和第一页；想配一句话页脚就再加 `note: '…'` 字段）
 4. 想加新一年（如 2026）：在 `allArchive` 里加 `'2026': []`，书架上会自动多一本书（书脊宽度随照片数长粗）
 5. 刷新 `archive.html`（浏览器缓存 data.js 时用 Cmd+Shift+R 硬刷新）
+
+### 如何往 Film 加一卷
+
+1. 在 `assets/images/film/` 下建文件夹，名字 = 这卷的 `id`，命名约定 **年月-型号-格式**
+   （连字符、URL 安全，如 `2403-gold200-135`、`2605-fujifilm-135`）
+2. 照片按**这卷的拍摄顺序**命名 `01.jpeg`、`02.jpeg`…放进去（HEIC/BMP 先转 JPEG，压缩标准同全站）
+3. 在 `data.js` 的 `allFilms` 数组里照抄任意一卷的格式加一段：
+   id / stock / label / format / camera / **lens** / date / **title** / **desc** / photos
+   （lens/title/desc 可留空自动隐藏；⚠️ 新型号需在 film.html 的 `SHELL_STYLES` 补一行配色）
+4. 同型号的卷会自动归到同一排搁板；新型号 = 柜子里自动多一排；
+   **同排内把卷按时间先后排在数组里**（早的在前 = 站在左边），日期精确到月（如 `2024.06`）
+5. 刷新 `film.html`（浏览器缓存 data.js 时用 Cmd+Shift+R 硬刷新）
 
 ### 支持的图片格式与压缩标准
 
@@ -461,7 +578,7 @@ iMessage 都读**，改一次全平台受益。
 
 ### fluid.js 手势引擎（修改前必读）
 
-系列页和 Archive 的 Lightbox 手势/动画全部来自这一个文件，页面里只有 hooks 接线：
+系列页、Archive 和 Film 的 Lightbox/阅读视图手势动画全部来自这一个文件，页面里只有 hooks 接线：
 
 - **`createSpring(onUpdate, onRest)`** — 临界阻尼弹簧（永不回弹），半隐式欧拉积分，支持随时改目标、带初速度启动
 - **`rubberband(offset, dimension)`** — 边界橡皮筋阻力（Apple 公式，c=0.55）
@@ -528,7 +645,12 @@ tailwind.config = {
 - 不写没有注释的 JavaScript 函数
 - 不为任何系列省略 `cover` 字段（封面统一靠 cover，省略则 gallery 缩略图空白）
 - **不使用 `italic` 类**：英文统一用 Cormorant Garamond 的正体，不要斜体（用户明确要求）
-- **不引入 Cormorant 以外的英文字体**（DM Sans 已经移除，保持 Cormorant + Noto Serif SC 两个字体即可）
+- **不引入 Cormorant 以外的英文字体**（DM Sans 已经移除，保持 Cormorant + Noto Serif SC 两个字体即可）。
+  **唯一例外（与品牌色例外同一条原则——"物"是内容，界面是设计系统）**：Film 页"物体表面的印字"
+  用 `font-shell` = 系统无衬线栈（`"Helvetica Neue", Arial, sans-serif`，零加载，真实暗盒印的就是这一路字）。
+  只允许出现在三处：135 筒身竖排印字、120 腰带印字、阅读视图片边字。
+  筒脚日期、面板卷信息（作品名/解释/参数行）、页码、note 等界面文字一律走界面字体
+  （Cormorant / 中文 Noto Serif），不得扩散到 font-shell
 
 ### 每次任务结束后报告
 1. 改了什么文件
@@ -546,11 +668,15 @@ tailwind.config = {
       流程见"分享卡片与国内部署"一节
 - [ ] 关于页文案填好后，同步改 `about.html` 的 `og:description`
       （现在是占位的"关于我，以及联系方式。"）
+- [ ] Film 逐卷填 `title`（作品名）/ `desc`（一句解释）/ `lens`（镜头），都可选、留空自动隐藏
+- [ ] Film 上线后考虑：首页轮播是否纳入 Film 照片（暂不纳入）
 - [ ] 填写真实文案（各系列 descZh/descEn，照片 caption/date/location/desc/meta，逐张手填）
 - [ ] 填写关于页自我介绍
 - [x] ~~往 Archive 放散片（2021–2025 已录入）~~
 - [x] ~~创建 GitHub 仓库并部署到 GitHub Pages~~（已上线）
 - [x] ~~分享卡片（Open Graph）+ favicon + 境外依赖本地化~~（`share-card` 分支）
+- [x] ~~Film 录入 7 卷真实胶卷（181 张，替换演示数据）+ 相机型号~~（`film-exhibit` 分支）
+- [x] ~~Film 阅读视图统一成 gallery 图文布局（作品名 / 解释 / 参数行）~~
 
 ### 未来可能的方向
 > 现阶段不实现，等需求明确后再讨论。

@@ -23,7 +23,7 @@ import os
 import re
 import sys
 
-PAGES = ["index.html", "gallery.html", "series.html", "archive.html", "about.html"]
+PAGES = ["index.html", "gallery.html", "series.html", "archive.html", "about.html", "film.html"]
 
 # 占位域名。页面里最初写的就是它，换过一次之后这个值就没用了，
 # 所以脚本靠正则去认 og:url / og:image 标签，而不是去找这个字符串。

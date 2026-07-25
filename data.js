@@ -145,6 +145,7 @@ var allPhotos = {
       caption:  '中央电视台',
       date:     '2024 年 8 月',
       location: '国贸｜北京',          // 拍摄地点，如：'北京' 或 '上海'
+      title:  '',
       desc:     '在酒吧',
       meta:     'Sony α6700',          // 相机/胶卷，如：'Contax T2 · Kodak Portra 400'
     },
@@ -1098,3 +1099,328 @@ var allArchive = {
   ],
 
 };
+
+
+// ================================================================
+// allFilms — Film（胶卷档案）按"卷"组织
+// ================================================================
+// Film 是和 Gallery / Archive 平级的第三种浏览维度：
+//   - Gallery = 按系列看（策展过的作品）
+//   - Archive = 按年份看（散片，一年一本书）
+//   - Film    = 按物质载体看（一卷胶片 = 一个时间胶囊）
+//
+// 数据结构：一个数组，每个元素是一卷胶片。
+// 页面会自动按 stock（胶卷型号）分组成一排一排的架子：
+//   同型号的卷站在同一层搁板上；排的顺序 = 型号在数组里首次出现的顺序。
+//
+// 每卷的字段：
+//   id:     唯一标识，与 assets/images/film/ 下的文件夹名完全一致（连字符，不要空格）
+//           命名习惯：型号缩写-序号，如 portra400-01、gold200-02
+//   stock:  胶卷型号全名（同一型号必须一字不差，否则会被分到两排）
+//           用在：分排依据 + 阅读视图的片边字和左上角
+//   label:  筒身印字（短版型号，大写，如 'PORTRA 400'）——型号只印在筒上，架子不设标牌
+//           每个空格 = 换一行（135 竖排两列 / 120 腰带两行）；每卷必填，不做自动缩写
+//   format: '135' 或 '120' —— 决定筒的造型（135 金属暗盒带片轴头 / 120 纸封卷）
+//           和阅读视图的片框（135 有齿孔 / 120 无齿孔）
+//   camera: 拍摄相机，可空（''）则不显示；一次性相机写 '一次性相机 · Fuji QuickSnap'
+//   date:   拍摄时间，精确到月（如 '2024.06'）——显示在筒脚下的搁板线下方 + 阅读视图左上角；
+//           可空（''）则不显示（忘了就空着，诚实比编造好）
+//   photos: 照片数组，顺序 = 这卷的拍摄顺序（第一张 = 抽出片头预览时露出的那张）
+//           每张只放 src、alt 和可选 note（一句话页脚），与 Archive 同一哲学：
+//           想配完整文案（标题/日期/地点/器材）的照片应该进 Gallery。
+//
+// 排内顺序约定：同型号的卷按时间从左到右排（靠这个数组里的先后顺序，自己控制）——
+// 钟爱的型号那一排，本身就是一条时间线。
+//
+// 添加一卷的流程：
+//   1. 在 assets/images/film/ 下建文件夹，名字 = id（如 portra400-03）
+//   2. 照片按拍摄顺序命名 01.jpeg、02.jpeg…放进去（HEIC 需先转 JPEG 压缩，规则同全站）
+//   3. 在下面数组里加一段（照抄任意一卷的格式），刷新 film.html（缓存用 Cmd+Shift+R）
+// ================================================================
+// ⚠️ 以下是测试数据：照片临时借用 Archive 的图，仅用于看效果。
+//    作者填好 assets/images/film/ 各文件夹后，把 src 换成真实路径、
+//    并把 stock / format / camera 改成每卷的真实信息。
+// ================================================================
+var allFilms = [
+
+  {
+    id:     '2403-gold200-120',
+    stock:  'Kodak Gold 200',
+    label:  'GOLD 200',
+    format: '120',
+    camera: 'Hasselblad 503CM',
+    lens:   '',
+    date:   '2024.03',
+    title:  '',
+    desc:   '',
+    photos: [
+      { src: 'assets/images/film/2403-gold200-120/01.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-120/02.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-120/03.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-120/04.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-120/05.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-120/06.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-120/07.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-120/08.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-120/09.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-120/10.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-120/11.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-120/12.jpeg', alt: '' },
+    ],
+  },
+
+  {
+    id:     '2403-gold200-135',
+    stock:  'Kodak Gold 200',
+    label:  'GOLD 200',
+    format: '135',
+    camera: 'Ricoh GR-S',
+    lens:   '',
+    date:   '2024.03',
+    title:  '',
+    desc:   '',
+    photos: [
+      { src: 'assets/images/film/2403-gold200-135/01.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/02.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/03.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/04.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/05.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/06.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/07.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/08.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/09.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/10.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/11.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/12.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/13.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/14.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/15.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/16.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/17.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/18.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/19.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/20.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/21.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/22.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/23.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/24.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/25.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/26.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/27.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/28.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/29.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/30.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/31.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/32.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/33.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/34.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/35.jpeg', alt: '' },
+      { src: 'assets/images/film/2403-gold200-135/36.jpeg', alt: '' },
+    ],
+  },
+
+  {
+    id:     '2405-gold200-120',
+    stock:  'Kodak Gold 200',
+    label:  'GOLD 200',
+    format: '120',
+    camera: 'Hasselblad 503CM',
+    lens:   '',
+    date:   '2024.05',
+    title:  '',
+    desc:   '',
+    photos: [
+      { src: 'assets/images/film/2405-gold200-120/01.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-120/02.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-120/03.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-120/04.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-120/05.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-120/06.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-120/07.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-120/08.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-120/09.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-120/10.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-120/11.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-120/12.jpeg', alt: '' },
+    ],
+  },
+
+  {
+    id:     '2405-gold200-135',
+    stock:  'Kodak Gold 200',
+    label:  'GOLD 200',
+    format: '135',
+    camera: 'Ricoh GR-S',
+    lens:   '',
+    date:   '2024.05',
+    title:  '',
+    desc:   '',
+    photos: [
+      { src: 'assets/images/film/2405-gold200-135/01.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/02.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/03.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/04.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/05.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/06.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/07.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/08.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/09.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/10.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/11.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/12.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/13.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/14.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/15.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/16.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/17.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/18.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/19.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/20.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/21.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/22.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/23.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/24.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/25.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/26.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/27.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/28.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/29.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/30.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/31.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/32.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/33.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/34.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/35.jpeg', alt: '' },
+      { src: 'assets/images/film/2405-gold200-135/36.jpeg', alt: '' },
+    ],
+  },
+
+  {
+    id:     '2512-portra400-135',
+    stock:  'Kodak Portra 400',
+    label:  'PORTRA 400',
+    format: '135',
+    camera: 'Canon EOS-1',
+    lens:   '',
+    date:   '2025.12',
+    title:  '',
+    desc:   '',
+    photos: [
+      { src: 'assets/images/film/2512-portra400-135/01.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/02.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/03.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/04.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/05.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/06.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/07.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/08.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/09.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/10.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/11.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/12.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/13.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/14.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/15.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/16.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/17.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/18.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/19.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/20.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/21.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/22.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/23.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/24.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/25.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/26.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/27.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/28.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/29.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/30.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/31.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/32.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/33.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/34.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/35.jpeg', alt: '' },
+      { src: 'assets/images/film/2512-portra400-135/36.jpeg', alt: '' },
+    ],
+  },
+
+  {
+    id:     '2605-fujifilm-135',
+    stock:  'Fujifilm',
+    label:  'FUJIFILM',
+    format: '135',
+    camera: 'FUJI film Quick Snap',
+    lens:   '',
+    date:   '2026.05',
+    title:  '',
+    desc:   '',
+    photos: [
+      { src: 'assets/images/film/2605-fujifilm-135/01.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/02.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/03.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/04.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/05.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/06.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/07.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/08.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/09.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/10.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/11.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/12.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/13.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/14.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/15.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/16.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/17.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/18.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/19.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/20.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/21.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/22.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/23.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/24.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/25.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/26.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/27.jpeg', alt: '' },
+      { src: 'assets/images/film/2605-fujifilm-135/28.jpeg', alt: '' },
+    ],
+  },
+
+  {
+    id:     '2607-portra400-135',
+    stock:  'Kodak Portra 400',
+    label:  'PORTRA 400',
+    format: '135',
+    camera: 'Canon EOS-1',
+    lens:   '',
+    date:   '2026.07',
+    title:  '',
+    desc:   '',
+    photos: [
+      { src: 'assets/images/film/2607-portra400-135/01.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/02.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/03.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/04.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/05.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/06.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/07.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/08.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/09.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/10.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/11.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/12.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/13.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/14.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/15.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/16.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/17.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/18.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/19.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/20.jpeg', alt: '' },
+      { src: 'assets/images/film/2607-portra400-135/21.jpeg', alt: '' },
+    ],
+  },
+
+];
+

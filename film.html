@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Film — Yang Photography</title>
+
+  <!-- ── 分享卡片 + 网站图标（与其他页面一致，详见 CLAUDE.md"分享卡片"一节）
+       ⚠️ og:url / og:image 目前是占位域名，域名下来后跑 scripts/set-domain.py 一并替换 -->
+  <meta name="description" content="七卷胶卷，一卷是一个时间胶囊。" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Yang Photography" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:title" content="胶卷档案 · 赵洋摄影" />
+  <meta property="og:description" content="七卷胶卷，一卷是一个时间胶囊。" />
+  <meta property="og:url" content="https://www.example.com/film.html" />
+  <meta property="og:image" content="https://www.example.com/assets/images/share/share-card.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="1200" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
+  <!-- Tailwind 运行时（本地副本）：国内节点访问 cdn.tailwindcss.com 不稳定，
+       一旦加载失败整站会退化成没有样式的裸文字，所以放在自己服务器上 -->
+  <script src="assets/vendor/tailwind.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'site-bg':      '#fafaf7',
+            'site-surface': '#f2f2ef',
+            'site-border':  '#e0e0dc',
+            'site-text':    '#111111',
+            'site-muted':   '#8a8a85',
+            'site-accent':  '#111111',
+          },
+          fontFamily: {
+            'display': ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'body':    ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'zh':      ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
+            // 仅限"物体表面的印字"（筒身/腰带/片边字）：真实暗盒印的就是
+            // Helvetica 一路的工业无衬线，用系统栈零加载。界面文字仍用 Cormorant。
+            'shell':   ['"Helvetica Neue"', 'Arial', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- 字体（本地副本）：fonts.googleapis.com 在国内访问不到，在线引用会让
+       中英文字体全部回退成系统默认字体。文件由 scripts/fetch-fonts.py 抓取 -->
+  <link href="assets/vendor/fonts.css" rel="stylesheet" />
+
+  <style>
+    /* ════════════════════════════════════════════════════════
+       胶卷柜式 Film：每卷胶片是一个筒，同型号的卷站在同一层搁板上。
+       抽象拟物（与书架式 Archive 同一哲学）：
+         · 筒的剪影 = 画幅制式（135 金属暗盒带片轴头 / 120 纸封卷）
+         · hover / 触屏第一击 = 从筒里抽出一截片头，露出这卷的第一张
+         · 点击翻开 = 进入片框阅读视图（135 有齿孔、120 无齿孔）
+       颜色一律用 Tailwind 的设计变量（写在元素 class 上），
+       这里只写几何、层叠和过渡——设计系统仍是唯一的颜色来源。
+       ════════════════════════════════════════════════════════ */
+
+    /* ── 柜子：一排排搁板，每排一个型号 ── */
+    #cabinet {
+      display: flex;
+      flex-direction: column;
+      gap: 3.5rem;
+      transition: opacity 0.4s ease;
+    }
+
+    /* 一排 = 站在搁板线上的一列筒（同型号；无标牌——型号印在筒身上，字越少越好） */
+    .film-row {
+      transition: opacity 0.4s ease;
+    }
+
+    /* 筒的容器：触屏两步交互里"把这卷推到屏幕中心"平移的就是它 */
+    .row-cans {
+      display: flex;
+      align-items: flex-end;
+      gap: 14px;
+      transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* ── 仓位（bay）：一卷占的位置 = 筒 + 脚下的小日期 ──
+       宽度动画在 bay 上做（展开时加上片头长度），日期跟着筒走 */
+    .bay {
+      position: relative;
+      width: calc(var(--w) * 1px);
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                  opacity 0.4s ease;
+    }
+    /* hover 抽片头只给有光标的设备；触屏走两步交互（.preview 居中 → 再点翻开） */
+    @media (hover: hover) { .bay:hover { width: calc(var(--w) * 1px + var(--lw) * 1px); } }
+    .bay.active, .bay.preview { width: calc(var(--w) * 1px + var(--lw) * 1px); }
+
+    /* 筒的裁切窗：筒身固定在左缘，片头藏在筒身右侧，靠 overflow:hidden 裁掉；
+       bay 展宽的过程就是"片头被抽出来" */
+    .slot {
+      position: relative;
+      width: 100%;
+      height: calc(var(--h) * 1px);
+      overflow: hidden;
+      transform-origin: 50% 100%;         /* 按压时以"站在搁板上"的底边为支点 */
+      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    /* 极轻的按压态（与书脊/卡片同款）——有意加的即时反馈，不要"修复"掉 */
+    .bay:active .slot { transform: scale(0.99); }
+
+    /* 脚下的小日期：搁板线下方、对准筒身居中（像标本柜里标本脚下的标签）；
+       没写日期的卷这行不渲染。同排内按时间从左到右排（靠 data.js 数组顺序） */
+    .bay-date {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: calc(var(--cw) * 1px);
+      padding-top: 12px;
+      text-align: center;
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+    }
+
+    /* ── 筒身：两种剪影 ── */
+    .can {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: calc(var(--cw) * 1px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 2;                         /* 压在片头之上：片头是"从筒里抽出来"的 */
+    }
+    /* 135 暗盒的片轴头：从筒顶伸出的一小截轴 */
+    .can-knob {
+      width: 18px;
+      height: 12px;
+      border-radius: 3px 3px 0 0;
+      margin-bottom: -1px;                /* 与筒身描边贴合 */
+    }
+    /* 筒身主体（135 高、120 矮胖，高度由 JS 按制式写入 --bh） */
+    .can-body {
+      position: relative;                 /* 真实壳模式的上下金属盖用绝对定位贴边 */
+      width: 100%;
+      height: calc(var(--bh) * 1px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* 真实壳模式：135 暗盒上下两端的压盖 */
+    .can-cap {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 10px;
+    }
+    /* 真实壳模式：壳身侧面的品牌色竖条（柯达 Professional 系的柯达黄） */
+    .can-stripe {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 16px;
+    }
+    /* 135：型号竖排印在筒身上（真实暗盒的印法）。
+       label 按空格拆行；vertical-rl + rotate(180deg) = 字底朝上、
+       从下往上读，且第一个词（字母）在左列、数字在右列。
+       字号是可读性下限：15 寸屏上要能一眼读出型号，别再调小 */
+    .can-label-v {
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      text-align: center;
+      font-size: 0.75rem;
+      letter-spacing: 0.22em;
+      line-height: 1.7;
+    }
+    /* 120：型号横贴在纸封腰带的标签上，label 按空格拆行 */
+    .can-band {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 0;
+      font-size: 0.75rem;
+      letter-spacing: 0.16em;
+      line-height: 1.5;
+    }
+
+    /* ── 片头（leader）：一整条胶片 + 末端的片头舌，是同一个实物 ──
+       收起时整条藏在筒身后面（筒身不透明、层级更高），只有末端的
+       舌尖露在筒外；hover/预览/翻开时整条向右滑出——舌尖始终在最
+       前端，就是"捏着舌头把片头抽出来"的动作，与 bay 展宽同一条
+       缓动曲线，同步到位。 */
+    .leader {
+      position: absolute;
+      left: calc(var(--cw) * 1px - 2px);  /* 与筒身衔接（盖掉一条描边） */
+      bottom: 4px;
+      width: calc(var(--lw) * 1px);       /* 抽出长度：135 长条 / 120 近方 */
+      height: calc(var(--sh) * 1px);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(calc(var(--lw) * -1px));   /* 收起：整条藏进筒后 */
+      transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    @media (hover: hover) { .bay:hover .leader { transform: translateX(0); } }
+    .bay.preview .leader, .bay.active .leader { transform: translateX(0); }
+
+    /* 片头舌（tip）：挂在片头条末端的一小截——不与胶片同高、外端带
+       弧度像个把手，刚拿到的新胶卷就是这样，也是"这里能抽"的暗示 */
+    .leader .tip {
+      position: absolute;
+      right: -12px;
+      bottom: 14px;
+      width: 13px;
+      height: 36px;
+      border-radius: 0 6px 6px 0;
+    }
+    /* 齿孔带（135 专用；120 的片头没有齿孔，用 padding 留出素黑边） */
+    .perf {
+      flex-shrink: 0;
+      display: flex;
+      gap: 7px;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      height: 13px;
+    }
+    .perf .hole {
+      flex-shrink: 0;
+      width: 7px;
+      height: 5.5px;
+      border-radius: 1.5px;
+    }
+    .leader .strip-img {
+      flex: 1;
+      min-height: 0;
+      margin: 0 12px;                     /* 左右露出片基的黑边 */
+      overflow: hidden;
+    }
+    .leader .strip-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .leader.f120 { padding: 7px 0; }      /* 120：无齿孔，上下素黑边 */
+    /* 120 是方画幅：无齿孔（收掉那两条空齿孔带的占高），左右黑边收到和上下
+       一样（7px），这样露出的照片才是正方形而不是被齿孔挤扁的宽条 */
+    .leader.f120 .perf { display: none; }
+    .leader.f120 .strip-img { margin: 0 7px; }
+
+    /* ── 打开某卷时：其余的筒（连同脚下日期）淡出收拢，别的排整排淡出 ── */
+    #cabinet.opening .film-row:not(.has-active) { opacity: 0; pointer-events: none; }
+    #cabinet.opening .bay:not(.active) {
+      opacity: 0;
+      width: 0;
+      pointer-events: none;
+    }
+
+    /* ════════════════════════════════════════════════════════
+       阅读视图（reader）：翻开一卷之后，一次一格。
+       结构与 archive.html 的书页阅读一致（照片区弹性 + 定高页脚），
+       区别是照片嵌在"片框"里：135 上下齿孔 + 片边字，120 无齿孔。
+       ════════════════════════════════════════════════════════ */
+    #reader {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.45s ease;
+      touch-action: pan-y;                /* 竖向留给浏览器，横向手势由 fluid.js 接管 */
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #reader.open { opacity: 1; pointer-events: auto; }
+
+    /* 说明面板里的空字段自动隐藏（没填就不占位、不留空行）——
+       作品名/解释/参数/note 任一没内容就消失（参数行一般都有型号，不会空）*/
+    #rt-title:empty, #rt-desc:empty, #rt-meta:empty, #page-note:empty { display: none; }
+
+    /* ── 片框：横片时 [齿孔] [片边字] [照片] [齿孔] 纵向排布 ──
+       竖片时齿孔转到左右两侧（物理底片上竖片是横躺的，
+       完全还原就得歪头看——这是拟物让位于可用性的地方）。 */
+    #film-frame {
+      display: grid;
+      grid-template-areas: "pa" "edge" "img" "pb";
+      padding: 8px 18px 10px;
+      cursor: grab;
+      max-width: 100%;                    /* 不超出左侧片框区（flex-1），别压到右侧面板 */
+    }
+    #perf-a { grid-area: pa; }
+    #perf-b { grid-area: pb; }
+    /* width:0 + min-width:100%：齿孔带不参与片框宽度计算（预填的几十颗齿孔
+       会把格子撑到全屏），只被动跟随照片的宽度，多余齿孔靠 overflow 裁掉 */
+    #film-frame .perf { height: 22px; gap: 10px; width: 0; min-width: 100%; }
+    #film-frame .perf .hole { width: 11px; height: 8px; border-radius: 2px; }
+
+    /* 片边字：型号在左、画格编号在右（135 编号带 A，120 纯数字） */
+    #edge-band {
+      grid-area: edge;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 2rem;
+      padding: 3px 2px 7px;
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      opacity: 0.55;
+    }
+    #film-frame img {
+      grid-area: img;
+      max-width: 100%;                    /* 跟随片框区宽度（与 series lightbox 的 max-w-full 一致）*/
+      max-height: calc(100vh - 12rem);    /* 页脚移走了，可以比原来高一些 */
+      object-fit: contain;
+    }
+
+    /* 竖片：片边字横贯顶部，齿孔改站左右两侧 */
+    #film-frame.portrait {
+      grid-template-areas: "edge edge edge" "pa img pb";
+      padding: 8px 8px 18px;
+    }
+    #film-frame.portrait .perf {
+      flex-direction: column;
+      width: 22px;
+      min-width: 0;
+      /* 竖片时同理：height:0 + min-height:100%，齿孔列跟随照片的高度 */
+      height: 0;
+      min-height: 100%;
+    }
+    #film-frame.portrait .perf .hole { width: 8px; height: 11px; }
+    #film-frame.portrait #edge-band { padding: 3px 14px 7px; }
+    #film-frame.portrait img { max-height: calc(100vh - 20rem); }
+
+    /* 120：没有齿孔，片基边缘更宽更素 */
+    #film-frame.f120, #film-frame.f120.portrait {
+      grid-template-areas: "edge" "img";
+      padding: 8px 26px 24px;
+    }
+    #film-frame.f120 .perf { display: none; }
+
+    /* 手机：片框边距收窄，照片限高放宽；宽度仍跟随容器（片框区），
+       不再用 88vw —— 上下堆叠布局里容器有内边距，88vw 会溢出屏幕 */
+    @media (max-width: 640px) {
+      #film-frame { padding: 6px 10px 8px; }
+      #film-frame.f120, #film-frame.f120.portrait { padding: 6px 14px 16px; }
+      #film-frame img { max-width: 100%; max-height: 62vh; }
+    }
+
+    /* 结束卡也可拖拽（用力一甩 = 收回这卷） */
+    #view-end { cursor: grab; }
+
+    /* 拖拽进行中（fluid.js 会给 #reader 加这个类）：全局变成抓紧光标 */
+    #reader.fluid-grabbing, #reader.fluid-grabbing * {
+      cursor: grabbing !important;
+    }
+
+    /* 按压态：按下瞬间缩小（无过渡 = 即时反馈），松开 100ms 缓出 */
+    .pressable { transition: transform 0.1s ease-out; }
+    .pressable:active { transform: scale(0.97); transition: none; }
+
+    /* 系统开了"减弱动态效果"：抽片头/居中位移不做动画，直接到位 */
+    @media (prefers-reduced-motion: reduce) {
+      .bay      { transition: opacity 0.4s ease; }
+      .leader   { transition: none; }
+      .row-cans { transition: none; }
+    }
+  </style>
+</head>
+
+<!-- overflow-x-hidden：抽片头/收拢的过渡瞬间可能短暂超出视口宽度，禁止横向滚动条闪现 -->
+<body class="bg-site-bg text-site-text font-body antialiased min-h-screen flex flex-col overflow-x-hidden">
+
+  <!-- 导航栏 -->
+  <nav class="fixed top-0 w-full z-50 bg-site-bg">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="index.html" class="font-display text-xl tracking-wide text-site-text hover:text-site-muted transition-colors">
+        Yang
+      </a>
+      <ul class="flex gap-8 text-sm text-site-muted">
+        <li><a href="gallery.html" class="hover:text-site-text transition-colors">Gallery</a></li>
+        <li><a href="archive.html" class="hover:text-site-text transition-colors">Archive</a></li>
+        <li><a href="film.html"    class="text-site-text">Film</a></li>
+        <li><a href="about.html"   class="hover:text-site-text transition-colors">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="h-16"></div>
+
+
+  <!-- 页面标题（与 Gallery / Archive 同构：英文大标题 + 中文小灰 + 左对齐短分割线） -->
+  <header class="max-w-6xl mx-auto px-6 pt-16 pb-8 w-full">
+    <h1>
+      <span class="block font-display text-4xl tracking-tight">Film</span>
+      <span class="block font-zh text-sm text-site-muted mt-2">胶卷档案</span>
+    </h1>
+    <div class="mt-8 h-px w-20 bg-site-border"></div>
+  </header>
+
+
+  <!-- 胶卷柜：每排一个型号，由 JS 根据 allFilms 生成 -->
+  <main class="flex-1 w-full max-w-6xl mx-auto px-6 pt-8 pb-24">
+    <div id="cabinet"></div>
+  </main>
+
+
+  <!-- 阅读视图：翻开一卷之后，一次一格 -->
+  <!-- 背景纯不透明纸面（不加模糊），与 gallery / series / archive 一致 -->
+  <div id="reader" class="fixed inset-0 z-[100] bg-site-bg flex items-center justify-center">
+
+    <!-- 左上角：页码（第几格 / 共几格），与 series lightbox 同位；拖动翻页时不动 -->
+    <div class="absolute top-6 left-8 text-xs text-site-muted tracking-widest z-10">
+      <span id="page-folio"></span>
+    </div>
+
+    <!-- 出口（右上角）：与全站一致的"展览出口"指示牌 -->
+    <button id="reader-close"
+            class="pressable absolute top-6 right-8 text-xs text-site-muted hover:text-site-text transition-colors tracking-widest z-10">
+      → Way out
+    </button>
+
+    <!-- 图文整体居中：片框在左、说明面板在右（与 series lightbox 同构，整体跟手拖动）-->
+    <div id="view-photo" class="flex flex-col md:flex-row items-center gap-8 md:gap-14 max-w-5xl w-full px-8 md:px-16">
+
+      <!-- 片框区：齿孔 + 片边字 + 照片 -->
+      <div id="page-photo" class="flex-1 flex items-center justify-center min-w-0 w-full">
+        <div id="film-frame" class="bg-site-text">
+          <div id="perf-a" class="perf"></div>
+          <!-- 片边字用 font-shell：真实底片边缘的印字就是无衬线（与筒身印字同一例外） -->
+          <div id="edge-band" class="font-shell text-site-bg">
+            <span id="edge-stock"></span>
+            <span id="edge-frame"></span>
+          </div>
+          <img id="page-img" src="" alt="" draggable="false" />
+          <div id="perf-b" class="perf"></div>
+        </div>
+      </div>
+
+      <!-- 说明面板（与 series lightbox 的文字面板同构）：
+           title = 作品名（作者自定义，相当于 series 的 caption）·
+           desc = 这卷的一句解释（可选）·
+           参数行 = 型号 · 相机 · 镜头 · 日期（全是固定技术信息，成组放底部，
+                    相当于 series 的 meta "Sony α6700"）。
+           —— 与 gallery 的区别：胶片型号和日期是固定的、不是创作标题，
+              所以不占标题位，标题留给作者自定义的作品名。
+           空字段由下面的 :empty 规则自动隐藏。 -->
+      <div class="w-full md:w-52 shrink-0 flex flex-col gap-2 font-display">
+        <h2 id="rt-title" class="font-zh text-2xl font-light text-site-text"></h2>
+        <p  id="rt-desc"  class="font-zh text-sm text-site-muted leading-loose mt-1"></p>
+        <p  id="rt-meta"  class="text-xs text-site-muted mt-2 leading-relaxed"></p>
+        <!-- 每格自己的一句话（note，可选，逐张在 data.js 里加）-->
+        <p  id="page-note" class="font-zh text-sm text-site-muted mt-2"></p>
+      </div>
+
+    </div>
+
+    <!-- 结束卡：看完最后一格再 → 进入此卡，再 → 即收回这卷，与全站一致 -->
+    <div id="view-end" class="absolute inset-0 flex-col items-center justify-center text-center px-12 mx-auto max-w-lg" style="display:none">
+      <h2 class="font-zh text-4xl font-light mb-4">游览到此结束</h2>
+      <p class="font-display text-site-muted text-lg">Your visit is over</p>
+      <p class="mt-16 text-xs text-site-muted opacity-30 tracking-widest">→ Way out</p>
+    </div>
+  </div>
+
+
+  <script src="data.js"></script>
+  <script src="fluid.js"></script>
+  <script>
+    // ── 两种制式的筒身几何（抽象拟物：剪影 = 制式）──────────────
+    //   cw = 筒身宽 / bh = 筒身高 / h = 筒总高（含 135 的片轴头）
+    //   sh = 片头高（120 胶片更宽，片头也更高）
+    //   w  = 仓位收起宽度（135 比筒身宽一点，给常态露出的片头舌留缝）
+    // 尺寸整体放大过一轮：15 寸屏上要能直接读出筒身型号（作者要求，别缩回去）
+    var TONGUE_W = 16;
+    var FORMAT_DIMS = {
+      // lw = 片头抽出的长度：135 是横条片头（长），120 是方画幅 6×6，
+      //      片头也该接近正方形（≈ sh），不能跟 135 一样拉成宽长条
+      '135': { cw: 68, bh: 100, h: 112, sh: 88,  w: 68 + TONGUE_W, lw: 220 },
+      '120': { cw: 70, bh: 122, h: 122, sh: 108, w: 70,            lw: 108 },
+    };
+    var LEADER_W = 220;   // 兜底值：dims 里没给 lw 时用（正常都从 --lw 读）
+
+    // ── 真实胶片壳配色开关（作者已采纳）─────────────────────────
+    // true  = 筒身穿各型号真实品牌配色（黑壳黄条的柯达 Professional 系 / 金黄 Gold / 富士绿 Superia）
+    // false = 回到全站抽象灰调（site-border 底 + muted 描边）
+    // 只换"皮肤"：几何、剪影、交互、数据全部不变，随时一行切回；具体配色见下方 SHELL_STYLES。
+    var REAL_SHELLS = true;
+
+    // 各型号的品牌色，按真实暗盒扁平化（键 = data.js 里的 stock 全名；查不到自动回退抽象灰调）：
+    //   柯达 Professional 系（Portra / Ektar）= 黑壳 + 柯达黄侧竖条 + 白字
+    //   Gold = 金黄壳 + 黑字（数字带金红）；Superia = 富士绿壳 + 白字
+    // 字段：body 壳身 / stripe 侧竖条（无则 null）/ text 字母列 / num 数字列（缺省同 text）
+    //       bandBg + bandText = 120 纸封腰带的底色和字色
+    // ⚠️ 这里是全站唯一允许硬编码颜色的地方：胶卷的品牌色属于"内容"而非设计系统，
+    //    就像照片本身有颜色一样——设计系统的规矩管的是界面，不管展品。
+    var KODAK_YELLOW = '#f2b400';
+    var SHELL_STYLES = {
+      'Kodak Portra 400':            { body: '#221f1c', stripe: KODAK_YELLOW, text: '#f5f2ec', bandBg: KODAK_YELLOW, bandText: '#221f1c' },
+      'Kodak Portra 800':            { body: '#221f1c', stripe: KODAK_YELLOW, text: '#f5f2ec', bandBg: KODAK_YELLOW, bandText: '#221f1c' },
+      'Kodak Ektar 100':             { body: '#221f1c', stripe: KODAK_YELLOW, text: '#f5f2ec', bandBg: KODAK_YELLOW, bandText: '#221f1c' },
+      'Kodak Gold 200':              { body: '#f0c435', stripe: null, text: '#221f1c', num: '#c8342b', bandBg: '#221f1c', bandText: '#f0c435' },
+      'Fujicolor Superia X-TRA 400': { body: '#15804d', stripe: null, text: '#f5f2ec', bandBg: '#f5f2ec', bandText: '#15804d' },
+    };
+    var SHELL_DARK = '#1c1a18';    // 135 暗盒的端盖 / 片轴头（真实暗盒两端是黑色压盖）
+
+    // ── 给一个容器填一排齿孔（多填一些，靠 overflow:hidden 居中裁掉）──
+    function buildHoles(el, count) {
+      for (var i = 0; i < count; i++) {
+        var hole = document.createElement('span');
+        hole.className = 'hole bg-site-bg';
+        el.appendChild(hole);
+      }
+    }
+
+    // ══ 第一部分：胶卷柜 ══════════════════════════════════════════
+
+    // 按型号分组：同 stock 的卷进同一排，排的顺序 = 型号首次出现的顺序
+    var rows = [];
+    var rowsByStock = {};
+    (allFilms || []).forEach(function (roll) {
+      if (!rowsByStock[roll.stock]) {
+        rowsByStock[roll.stock] = { stock: roll.stock, rolls: [] };
+        rows.push(rowsByStock[roll.stock]);
+      }
+      rowsByStock[roll.stock].rolls.push(roll);
+    });
+
+    var cabinet = document.getElementById('cabinet');
+
+    // 把筒身印字按空格拆行：'PORTRA 400' → 两行（135 竖排两列 / 120 腰带两行）
+    // 真实壳模式下可分色：第一个词（字母）用 textColor，其余（数字）用 accentColor
+    function labelLines(label, textColor, accentColor) {
+      return (label || '').split(' ').map(function (word, i) {
+        var color = textColor ? (i === 0 ? textColor : accentColor) : '';
+        return '<div' + (color ? ' style="color:' + color + '"' : '') + '>' + word + '</div>';
+      }).join('');
+    }
+
+    rows.forEach(function (row) {
+      var rowEl = document.createElement('div');
+      rowEl.className = 'film-row border-b border-site-border';
+
+      // 这排的筒（触屏两步交互平移的就是这个容器）
+      var cans = document.createElement('div');
+      cans.className = 'row-cans';
+      rowEl.appendChild(cans);
+
+      row.rolls.forEach(function (roll) {
+        var dims = FORMAT_DIMS[roll.format] || FORMAT_DIMS['135'];
+        var cover = roll.photos.length ? roll.photos[0].src : '';
+
+        // 仓位 = 筒 + 脚下的小日期；宽度动画、点击、浮现都在这一层
+        var bay = document.createElement('div');
+        bay.className = 'bay';
+        bay.style.setProperty('--w',  dims.w);
+        bay.style.setProperty('--h',  dims.h);
+        bay.style.setProperty('--cw', dims.cw);
+        bay.style.setProperty('--bh', dims.bh);
+        bay.style.setProperty('--sh', dims.sh);
+        bay.style.setProperty('--lw', dims.lw);   // 片头抽出长度（135 长条 / 120 近方）
+
+        // 筒身：135 = 片轴头 + 竖排型号；120 = 纸封卷 + 型号横贴腰带（印字 = label 字段）
+        // 两套皮肤（几何完全相同，只换颜色）：
+        //   真实壳（REAL_SHELLS 开且查到品牌色）= 品牌配色 + 金属端盖 + 分色印字
+        //   抽象灰调 = site-border 打底、site-muted 半透明描边——比背景深一档立出来
+        var st = REAL_SHELLS ? SHELL_STYLES[roll.stock] : null;
+        var canInner;
+        if (roll.format === '120') {
+          canInner = st
+            ? '<div class="can-body" style="background:' + st.body + ';border:1px solid rgba(0,0,0,0.25)">' +
+                '<div class="can-band font-shell" style="background:' + st.bandBg + ';border-top:1px solid rgba(0,0,0,0.15);border-bottom:1px solid rgba(0,0,0,0.15)">' +
+                  labelLines(roll.label, st.bandText, st.bandText) +
+                '</div>' +
+              '</div>'
+            : '<div class="can-body bg-site-border border border-site-muted/50">' +
+                '<div class="can-band bg-site-bg border-y border-site-muted/40 font-shell text-site-text/75">' +
+                  labelLines(roll.label) +
+                '</div>' +
+              '</div>';
+        } else {
+          canInner = st
+            ? '<div class="can-knob" style="background:' + SHELL_DARK + ';border:1px solid rgba(0,0,0,0.4)"></div>' +
+              '<div class="can-body" style="background:' + st.body + ';border:1px solid rgba(0,0,0,0.25)">' +
+                (st.stripe ? '<div class="can-stripe" style="background:' + st.stripe + '"></div>' : '') +
+                '<div class="can-cap" style="top:0;background:' + SHELL_DARK + '"></div>' +
+                // 有侧竖条时印字往右让开，仍在剩余区域内居中
+                '<div class="can-label-v font-shell"' + (st.stripe ? ' style="margin-left:16px"' : '') + '>' +
+                  labelLines(roll.label, st.text, st.num || st.text) +
+                '</div>' +
+                '<div class="can-cap" style="bottom:0;background:' + SHELL_DARK + '"></div>' +
+              '</div>'
+            : '<div class="can-knob bg-site-border border border-site-muted/50"></div>' +
+              '<div class="can-body bg-site-border border border-site-muted/50">' +
+                '<div class="can-label-v font-shell text-site-text/75">' + labelLines(roll.label) + '</div>' +
+              '</div>';
+        }
+
+        // 片头：这卷的第一张，嵌在小片框里（135 带齿孔 + 末端片头舌，120 素黑边无舌）
+        var leader =
+          '<div class="leader bg-site-text' + (roll.format === '120' ? ' f120' : '') + '">' +
+            '<div class="perf"></div>' +
+            '<div class="strip-img">' +
+              // 不用 loading="lazy"：片头藏在 overflow:hidden 里，浏览器视作"不可见"
+              // 会永不加载，fluidReveal 等不到解码完成，筒就永远不浮现
+              (cover ? '<img src="' + cover + '" alt="' + roll.stock + ' 片头" />' : '') +
+            '</div>' +
+            '<div class="perf"></div>' +
+            // 片头舌挂在条的末端，跟着整条一起滑（120 是封好的纸卷，没有舌）
+            (roll.format === '120' ? '' : '<div class="tip bg-site-text"></div>') +
+          '</div>';
+
+        bay.innerHTML =
+          '<div class="slot">' + leader + '<div class="can">' + canInner + '</div></div>' +
+          // 脚下小日期（没写就不渲染这行）
+          (roll.date ? '<div class="bay-date font-display text-site-muted">' + roll.date + '</div>' : '');
+        // 135 的片头齿孔（120 的 .perf 留空即无齿孔）
+        if (roll.format !== '120') {
+          bay.querySelectorAll('.perf').forEach(function (p) { buildHoles(p, 22); });
+        }
+
+        // 点击：桌面（有光标）直接翻开；触屏走两步——先居中抽片头，再点才翻开
+        bay.addEventListener('click', function () {
+          if (isTouchMode() && previewSlot !== bay) {
+            previewRoll(bay, cans);
+            return;
+          }
+          openRoll(roll, bay, rowEl);
+        });
+
+        fluidReveal(bay);   // 滚动浮现：筒第一次进入视野时轻轻浮上来
+        cans.appendChild(bay);
+      });
+
+      cabinet.appendChild(rowEl);
+    });
+
+    // ══ 触屏两步交互：先居中抽片头，再点翻开（与 Archive 书架同构）══
+    // 手机上没有 hover，点筒的第一下 = 把这卷推到这排的屏幕中心、抽出片头，
+    // 再点一下才真正翻开。点其他筒切换预览、点空白收回。
+    // 桌面不做居中位移（筒一动光标底下就换卷，会抖），hover 原位抽片头即可。
+
+    var previewSlot = null;   // 当前居中预览的筒
+    var previewCans = null;   // 它所在的 .row-cans（收回时归位）
+
+    // 每次点击时现查设备是否无光标（触屏），不在加载时缓存
+    function isTouchMode() {
+      return !window.matchMedia('(hover: hover)').matches;
+    }
+
+    // 把某个筒居中并抽出片头
+    function previewRoll(slot, cans) {
+      clearPreview();
+      previewSlot = slot;
+      previewCans = cans;
+      slot.classList.add('preview');
+      centerCansOn(slot, cans);
+    }
+
+    // 计算这排的筒需要平移多少，才能让这个筒（按展开后的目标宽度）的中心对准屏幕中心
+    // 按目标布局直接算，不等动画走完——位移和抽片头走同一条缓动曲线，同时到位
+    function centerCansOn(slot, cans) {
+      var slots = Array.prototype.slice.call(cans.children);
+      var gap = 14;
+      var widths = slots.map(function (s) {
+        var w = parseFloat(s.style.getPropertyValue('--w'));
+        // 展开后要加的片头长度按格式走（135 长 / 120 近方），别再用固定 220
+        var lw = parseFloat(s.style.getPropertyValue('--lw')) || LEADER_W;
+        return (s === slot) ? w + lw : w;
+      });
+      var idx = slots.indexOf(slot);
+      var before = 0;
+      for (var i = 0; i < idx; i++) before += widths[i] + gap;
+      // 目标布局下这个筒的屏幕中心位置 = 容器左缘 + 前面所有筒 + 自身一半
+      var left = cans.getBoundingClientRect().left - getTranslateX(cans);
+      var slotCenter = left + before + widths[idx] / 2;
+      var delta = window.innerWidth / 2 - slotCenter;
+      cans.style.transform = 'translateX(' + delta + 'px)';
+    }
+
+    // 读取容器当前的 translateX（还原前的基准位置用）
+    function getTranslateX(el) {
+      var t = el.style.transform;
+      var m = t && t.match(/translateX\((-?[\d.]+)px\)/);
+      return m ? parseFloat(m[1]) : 0;
+    }
+
+    // 收回预览：筒缩回，整排归位
+    function clearPreview() {
+      if (previewSlot) previewSlot.classList.remove('preview');
+      if (previewCans) previewCans.style.transform = '';
+      previewSlot = null;
+      previewCans = null;
+    }
+
+    // 点柜子以外的空白处 = 收回预览（阅读视图打开时不管）
+    document.addEventListener('click', function (e) {
+      if (!previewSlot) return;
+      if (reader.classList.contains('open')) return;
+      if (e.target.closest && e.target.closest('.bay')) return;
+      clearPreview();
+    });
+
+    // ══ 第二部分：阅读视图 ══════════════════════════════════════
+
+    var reader      = document.getElementById('reader');
+    var btnClose    = document.getElementById('reader-close');
+    var viewPhoto   = document.getElementById('view-photo');   // 片框+面板整体（拖动的就是它）
+    var photoArea   = document.getElementById('page-photo');
+    var filmFrame   = document.getElementById('film-frame');
+    var pageImg     = document.getElementById('page-img');
+    var edgeStock   = document.getElementById('edge-stock');
+    var edgeFrame   = document.getElementById('edge-frame');
+    // 右侧说明面板（与 series lightbox 同构）
+    var rtTitle     = document.getElementById('rt-title');   // 作品名（作者自定义 = 标题）
+    var rtDesc      = document.getElementById('rt-desc');     // 这卷的一句解释（可选）
+    var rtMeta      = document.getElementById('rt-meta');     // 型号·相机·镜头·日期 = 参数
+    var pageNote    = document.getElementById('page-note');   // 每格自己的一句话（可选）
+    var pageFolio   = document.getElementById('page-folio');
+    var viewEnd     = document.getElementById('view-end');
+
+    // 片框的齿孔只建一次（多建一些，靠 overflow:hidden 居中裁掉）
+    buildHoles(document.getElementById('perf-a'), 60);
+    buildHoles(document.getElementById('perf-b'), 60);
+
+    var currentRoll  = null;   // 当前翻开的是哪一卷
+    var currentIndex = 0;      // 当前看到第几格（等于 photos.length 时是结束卡）
+    var activeSlot   = null;   // 柜子里被翻开的那个筒（收回时还原）
+    var activeRow    = null;   // 它所在的排
+
+    // 翻开一卷：其余筒淡出收拢、别的排整排淡出，然后淡入阅读视图
+    function openRoll(roll, slot, rowEl) {
+      currentRoll  = roll;
+      currentIndex = 0;
+      activeSlot   = slot;
+      activeRow    = rowEl;
+      clearPreview();
+      cabinet.classList.add('opening');
+      rowEl.classList.add('has-active');
+      slot.classList.add('active');
+      setTimeout(function () {
+        swipeControl.reset();   // 清掉上一次遗留的位移/透明度
+        updateReader();
+        reader.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }, 420);
+    }
+
+    // 收回这卷：阅读视图淡出，柜子还原
+    function closeRoll() {
+      swipeControl.reset();     // 中途关闭也要清场，下次打开才干净
+      reader.classList.remove('open');
+      cabinet.classList.remove('opening');
+      if (activeSlot) activeSlot.classList.remove('active');
+      if (activeRow)  activeRow.classList.remove('has-active');
+      activeSlot = null;
+      activeRow  = null;
+      clearPreview();
+      document.body.style.overflow = '';
+    }
+
+    // ✏️═══════════════ 页脚文字怎么自定义（给作者看） ═══════════════
+    // 每格照片下面可以写一行自己的话（note 字段），显示在照片和页码之间。
+    // 修改位置：data.js → allFilms → 对应卷的 photos 数组里，给那张照片加 note：
+    //
+    //   { src: 'assets/images/film/portra400-01/03.jpeg', alt: '', note: '雨停之前' },
+    //
+    // 不写 note 就只显示页码，不占位。改完硬刷新（Cmd+Shift+R）即可。
+    // ═══════════════════════════════════════════════════════════════
+
+    // 照片加载完成后，按横竖比例决定齿孔站上下还是站左右
+    pageImg.addEventListener('load', function () {
+      filmFrame.classList.toggle('portrait', pageImg.naturalHeight > pageImg.naturalWidth);
+    });
+
+    // 根据 currentIndex 渲染当前格：0..N-1 是照片格，等于 N 时是结束卡
+    function updateReader() {
+      var photos = currentRoll ? currentRoll.photos : [];
+      if (currentIndex === photos.length) {          // ── 结束卡视图 ──
+        viewPhoto.style.display = 'none';            // 片框+面板整体隐藏
+        pageFolio.textContent = '';                  // 页码清空（结束卡不报第几格）
+        viewEnd.style.display = 'flex';
+        return;
+      }
+      // ── 照片格 ──
+      var p = photos[currentIndex];
+      if (!p) return;
+      viewEnd.style.display   = 'none';
+      viewPhoto.style.display = '';
+      // 片框制式：135 齿孔 / 120 素边
+      filmFrame.classList.toggle('f120', currentRoll.format === '120');
+      pageImg.src = p.src;
+      pageImg.alt = p.alt || (currentRoll.stock + ' 第 ' + (currentIndex + 1) + ' 格');
+      // 片边字：型号在左，画格编号在右（135 带 A —— 真实底片的画格编号写法）
+      edgeStock.textContent = currentRoll.stock;
+      edgeFrame.textContent = (currentIndex + 1) + (currentRoll.format === '120' ? '' : 'A');
+      pageFolio.textContent = (currentIndex + 1) + ' / ' + photos.length;
+      // 右侧说明面板（与 series lightbox 同构）：作品名=标题、desc=解释、
+      // 参数行=型号·相机·镜头·日期（全是固定技术信息，成组放底部）。
+      // 胶片一卷器材固定，所以整卷共用一套、每格只换 note。空字段靠 :empty 隐藏。
+      rtTitle.textContent = currentRoll.title || '';
+      rtDesc.textContent  = currentRoll.desc  || '';
+      rtMeta.textContent  = [currentRoll.stock, currentRoll.camera, currentRoll.lens, currentRoll.date]
+        .filter(function (s) { return s; }).join(' · ');
+      pageNote.textContent = p.note || '';           // 每格自己的一句话
+    }
+
+    // ── 手势 + 翻页动画：全部交给 fluid.js 的滑动控制器 ──────────
+    // 与 series / archive 完全一致：1:1 跟手、橡皮筋、惯性决策；
+    // 跟手移动的是整个片框（齿孔和照片是一体的实物）
+    var swipeControl = createSwipeControl(reader, {
+
+      // 阅读视图打开着才接管手势
+      isActive: function() { return reader.classList.contains('open'); },
+
+      // 当前应该跟手移动的视图：图文整体（片框+面板，与 series 一致），或结束卡
+      getView: function() {
+        var n = currentRoll ? currentRoll.photos.length : 0;
+        return currentIndex === n ? viewEnd : viewPhoto;
+      },
+
+      // 边界：第一格不能再往回；结束卡不能再往前（往前 = 收回这卷）
+      canPrev: function() { return currentIndex > 0; },
+      canNext: function() { return currentRoll && currentIndex < currentRoll.photos.length; },
+
+      // 真正换内容：改索引 + 重新渲染（控制器保证不会越界调用）
+      swap: function(direction) {
+        currentIndex += direction;
+        updateReader();
+      },
+
+      // 收回这卷：结束卡上用力一甩，或键盘/滑动再往前
+      flickClose: closeRoll,
+    });
+
+    btnClose.addEventListener('click', closeRoll);
+
+    // 照片区点击翻页：左半边往回、右半边往后（拖拽松手不算点击）
+    photoArea.addEventListener('click', function (e) {
+      if (swipeControl.justDragged()) return;
+      var rect = photoArea.getBoundingClientRect();
+      swipeControl.slide((e.clientX - rect.left) < rect.width / 2 ? -1 : 1);
+    });
+
+    // 结束卡点击 = 再往后 = 收回这卷
+    viewEnd.addEventListener('click', function () {
+      if (swipeControl.justDragged()) return;
+      swipeControl.slide(1);
+    });
+
+    // 键盘：Esc 收回，← → 翻页（同一条动画管路）
+    document.addEventListener('keydown', function(e) {
+      if (!reader.classList.contains('open')) return;
+      if (e.key === 'Escape')     closeRoll();
+      if (e.key === 'ArrowLeft')  swipeControl.slide(-1);
+      if (e.key === 'ArrowRight') swipeControl.slide(1);
+    });
+  </script>
+
+</body>
+</html>
