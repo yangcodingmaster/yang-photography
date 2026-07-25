@@ -42,7 +42,6 @@ rsync -avz --progress --delete $DRY_RUN \
   --exclude '.gitignore' \
   --exclude '.DS_Store' \
   --exclude 'api/config.php' \
-  --exclude 'api/*.json' \
   ./ "${SERVER_USER}@${SERVER_IP}:${REMOTE_DIR}/"
 
 echo
@@ -61,14 +60,16 @@ fi
 # 代价是：如果 REMOTE_DIR 填错，指向了别的目录，那个目录会被清空。
 # 所以换服务器或换域名后第一次跑，请先用 --dry-run 确认一遍。
 #
-# ---------- 说明：留言数据为什么不会被删掉 ----------
+# ---------- 说明：留言表单的 API key 为什么不会被删掉 ----------
 #
-# 留言和 Resend 的 API key 是"只在服务器上存在、本地永远没有"的东西，
+# Resend 的 API key 是"只在服务器上存在、本地永远没有"的东西，
 # 正好是 --delete 要清理的对象。为此做了两层保险：
 #
-#   第一层（主要的）：数据和密钥根本不在网站目录里，在 /www/guestbook-data/。
+#   第一层（主要的）：key 根本不在网站目录里，在 /www/site-secrets/config.php。
 #                    那个目录不在 REMOTE_DIR 底下，rsync 的镜子照不到。
-#   第二层（兜底的）：上面两条 exclude。万一将来有人图省事把数据挪回
-#                    api/ 目录里，也不至于一部署就全没了。
+#   第二层（兜底的）：上面那条 api/config.php 的 exclude。万一将来有人图省事
+#                    把配置挪回 api/ 目录里，也不至于一部署就没了。
 #
 # 换句话说：正常情况下第二层是多余的，留着是为了不正常的情况。
+#
+# 留言本身不用管 —— 表单是收下就发邮件，服务器上不存任何东西。

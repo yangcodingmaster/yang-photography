@@ -104,14 +104,14 @@
   </main>
 
 
-  <!-- 留言入口：按钮放这儿，点开是一个整屏浮层（见 guestbook.js） -->
-  <div id="guestbook-slot" data-style="footer" class="pb-24"></div>
+  <!-- 留言入口：按钮放这儿，点开是一个整屏表单浮层（见 message.js） -->
+  <div id="message-slot" data-style="footer" class="pb-24"></div>
 
 
   <!-- 先加载数据文件和交互引擎（滚动浮现用），再执行渲染逻辑 -->
   <script src="data.js"></script>
   <script src="fluid.js"></script>
-  <script src="guestbook.js"></script>
+  <script src="message.js"></script>
   <script>
     // 把 allSeries 数组渲染成系列卡片
     var grid = document.getElementById('series-grid');
