@@ -266,6 +266,10 @@
   </main>
 
 
+  <!-- 留言入口：按钮放这儿，点开是一个整屏浮层（见 guestbook.js） -->
+  <div id="guestbook-slot" data-style="footer" class="pb-16"></div>
+
+
   <!-- 阅读视图：翻开书之后，一次一页 -->
   <!-- 背景纯不透明纸面（不加模糊），与 gallery/series 的 Lightbox 一致 -->
   <div id="reader" class="fixed inset-0 z-[100] bg-site-bg">
@@ -301,6 +305,7 @@
 
   <script src="data.js"></script>
   <script src="fluid.js"></script>
+  <script src="guestbook.js"></script>
   <script>
     // ── 取出所有年份，按升序（书架从左到右按时间排：2021 → 2025） ──
     var years = Object.keys(allArchive || {}).sort();

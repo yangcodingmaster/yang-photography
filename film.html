@@ -409,6 +409,10 @@
   </main>
 
 
+  <!-- 留言入口：按钮放这儿，点开是一个整屏浮层（见 guestbook.js） -->
+  <div id="guestbook-slot" data-style="footer" class="pb-16"></div>
+
+
   <!-- 阅读视图：翻开一卷之后，一次一格 -->
   <!-- 背景纯不透明纸面（不加模糊），与 gallery / series / archive 一致 -->
   <div id="reader" class="fixed inset-0 z-[100] bg-site-bg flex items-center justify-center">
@@ -470,6 +474,7 @@
 
   <script src="data.js"></script>
   <script src="fluid.js"></script>
+  <script src="guestbook.js"></script>
   <script>
     // ── 两种制式的筒身几何（抽象拟物：剪影 = 制式）──────────────
     //   cw = 筒身宽 / bh = 筒身高 / h = 筒总高（含 135 的片轴头）
