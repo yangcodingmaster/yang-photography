@@ -5,8 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>关于 / About — Yang Photography</title>
 
+  <!-- ── 分享卡片 + 网站图标 ──────────────────────────────────
+       把网址发到微信 / QQ / 微博 / 飞书时，对方看到的是"标题 + 描述 +
+       缩略图"的卡片而不是一串光秃秃的网址，靠的就是下面这几行。
+
+       两个容易踩的点：
+       1. og:image 和 og:url 必须是完整网址（带 https:// 和域名）——
+          微信服务器是拿着它去下载缩略图的，相对路径它找不到；
+       2. 微信抓取时不执行 JavaScript，所以这些内容必须写死在 HTML 里，
+          不能靠脚本生成（series.html 因此只能用通用文案，
+          没法按 ?id= 显示每个系列自己的封面）。
+
+       换域名：python3 scripts/set-domain.py 你的域名
+       换缩略图：python3 scripts/make-share-card.sh 见该脚本说明
+       ────────────────────────────────────────────────────── -->
+  <meta name="description" content="关于我，以及联系方式。" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Yang Photography" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:title" content="关于 · 赵洋摄影" />
+  <meta property="og:description" content="关于我，以及联系方式。" />
+  <meta property="og:url" content="https://www.example.com/about.html" />
+  <meta property="og:image" content="https://www.example.com/assets/images/share/share-card.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="1200" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
+
   <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind 运行时（本地副本）：国内节点访问 cdn.tailwindcss.com 不稳定，
+       一旦加载失败整站会退化成没有样式的裸文字，所以放在自己服务器上 -->
+  <script src="assets/vendor/tailwind.js"></script>
 
   <!-- 设计系统（与其他页面保持一致） -->
   <script>
@@ -32,8 +63,9 @@
   </script>
 
   <!-- 字体加载 -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet" />
+  <!-- 字体（本地副本）：fonts.googleapis.com 在国内访问不到，在线引用会让
+       中英文字体全部回退成系统默认字体。文件由 scripts/fetch-fonts.py 抓取 -->
+  <link href="assets/vendor/fonts.css" rel="stylesheet" />
 </head>
 
 <body class="bg-site-bg text-site-text font-body antialiased">

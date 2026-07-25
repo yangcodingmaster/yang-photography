@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>分享卡片模板（不是网站页面）</title>
+
+  <!-- ── 这是什么 ────────────────────────────────────────────────
+       生成微信/社交平台分享缩略图的"模具"，不对访客开放，也不出现在导航里。
+       用同一套字体和颜色，保证分享图和网站是同一个视觉语言。
+
+       怎么用：由 scripts/make-share-card.sh 用无头浏览器截图，
+       通过网址参数决定内容，例如：
+         share-card.html?photo=assets/images/...jpg&sub=摄影作品集
+
+       参数：
+         photo   照片路径（相对项目根目录）
+         sub     "Yang" 下面那行小灰字，留空则不显示
+         ratio   画布比例，square（1:1，微信用）或 wide（1.91:1，Twitter 等用）
+         layout  版式，center（居中）、polaroid（照片偏上、下方留厚边）
+                 或 icon（不放照片，只留一个大写 Y，用来做网站图标）
+       ──────────────────────────────────────────────────────── -->
+
+  <link href="../assets/vendor/fonts.css" rel="stylesheet" />
+
+  <style>
+    /* 画布：默认 1200×1200 的正方形。微信会把分享缩略图裁成方的，
+       所以方图是"最不会被裁坏"的安全选择。 */
+    html, body { margin: 0; padding: 0; }
+
+    .card {
+      width: 1200px;
+      height: 1200px;
+      background: #fafaf7;          /* site-bg，与全站纸面同色 */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    /* 横版（1.91:1）：Twitter / Facebook / 飞书等平台的大图卡用 */
+    .card.wide { width: 1200px; height: 628px; }
+
+    /* 照片：保持自身比例不裁切，和首页明信片式的处理一致。
+       描边用 3px 而不是网站上的 1px——这张图会被缩小好几倍来显示，
+       1px 在缩略图里会直接消失。
+
+       尺寸比网站上"相对更大"是有意的：微信聊天列表里的缩略图只有
+       百来像素，网站那种奢侈的留白在这个尺寸下会显得空、不抓眼。 */
+    .photo {
+      max-width: 88%;
+      max-height: 62%;
+      border: 3px solid #111111;
+      display: block;
+    }
+    .card.wide .photo { max-width: 56%; max-height: 66%; }
+
+    /* 落款区：照片下方的留白里，像明信片背面写字的那一块 */
+    .sign {
+      margin-top: 62px;
+      text-align: center;
+    }
+    .card.wide .sign { margin-top: 48px; }
+
+    /* 宝丽来版式：照片顶上去，把留白全部集中到下方形成一条厚边，
+       落款印在这条厚边上——实物照片就是这个重心。 */
+    .card.polaroid {
+      justify-content: flex-start;
+      padding-top: 96px;
+    }
+    .card.polaroid .photo { max-width: 84%; max-height: 60%; }
+    .card.polaroid .sign  { margin-top: 96px; }
+
+    /* 图标版式：浏览器标签页上的小图标。只留一个字母，
+       字重用 600 而不是正文的 400——缩到 16px 时细笔画会整根消失。 */
+    .card.icon        { width: 512px; height: 512px; }
+    .card.icon .photo { display: none; }
+    .card.icon .sign  { margin-top: 0; }
+    .card.icon .name  {
+      font-size: 400px;
+      font-weight: 600;
+      letter-spacing: 0;
+      padding-left: 0;
+      /* 字母 Y 的视觉重心偏上，往下压一点才像居中 */
+      transform: translateY(0.04em);
+    }
+
+    .sign .name {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: 62px;
+      letter-spacing: 0.22em;
+      color: #111111;
+      /* letter-spacing 会在最后一个字母右边也加空隙，看起来重心偏左，
+         补一个等量的左内边距把它拉回视觉中心 */
+      padding-left: 0.22em;
+      line-height: 1;
+    }
+
+    .sign .sub {
+      font-family: 'Noto Serif SC', 'Source Han Serif SC', serif;
+      font-weight: 300;
+      font-size: 26px;
+      letter-spacing: 0.32em;
+      padding-left: 0.32em;
+      color: #8a8a85;              /* site-muted */
+      margin-top: 26px;
+      line-height: 1;
+    }
+    .sign .sub:empty { display: none; }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <img class="photo" id="photo" alt="" />
+    <div class="sign">
+      <div class="name">Yang</div>
+      <div class="sub" id="sub"></div>
+    </div>
+  </div>
+
+  <script>
+    // 从网址参数读取要画的内容，让同一个模板能生成多个版本
+    var params = new URLSearchParams(location.search);
+
+    // 照片路径：模板在 scripts/ 目录下，所以要往上退一级
+    var photo = params.get('photo') || 'assets/images/gallery/photos-of-2024/street-life/19.jpeg';
+    document.getElementById('photo').src = '../' + photo;
+
+    // 落款下面那行小字，不传就不显示
+    document.getElementById('sub').textContent = params.get('sub') || '';
+
+    // 画布比例与版式
+    var card = document.getElementById('card');
+    if (params.get('ratio') === 'wide') card.classList.add('wide');
+    if (params.get('layout') === 'polaroid') card.classList.add('polaroid');
+    if (params.get('layout') === 'icon') {
+      card.classList.add('icon');
+      // 图标只放得下一个字母
+      document.querySelector('.name').textContent = 'Y';
+    }
+  </script>
+</body>
+</html>
