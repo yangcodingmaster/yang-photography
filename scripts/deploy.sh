@@ -42,6 +42,8 @@ rsync -avz --progress --delete $DRY_RUN \
   --exclude '.gitignore' \
   --exclude '.DS_Store' \
   --exclude 'api/config.php' \
+  --exclude 'api/README.md' \
+  --exclude 'api/config.sample.php' \
   ./ "${SERVER_USER}@${SERVER_IP}:${REMOTE_DIR}/"
 
 echo
@@ -73,3 +75,8 @@ fi
 # 换句话说：正常情况下第二层是多余的，留着是为了不正常的情况。
 #
 # 留言本身不用管 —— 表单是收下就发邮件，服务器上不存任何东西。
+#
+# 另外两条 exclude（README.md 和 config.sample.php）是别的考虑：
+# 它们不含密钥，进 git 没问题，但没必要放到公网上让人直接下载 ——
+# README 里写着密钥存在哪、体检接口叫什么、有哪些防护措施。
+# 服务器上只需要 message.php 这一个能执行的文件，文档留在仓库里就够了。
