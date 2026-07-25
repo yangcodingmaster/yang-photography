@@ -773,7 +773,9 @@
       pageNote.textContent  = p.note || '';
       pageFolio.textContent = (currentIndex + 1) + ' / ' + photos.length;
       // 左上角：这卷是什么（空字段自动跳过）
-      readerTitle.textContent = [currentRoll.stock, currentRoll.camera, currentRoll.date]
+      // 胶片一卷用固定的相机 + 镜头 + 胶片，所以这些信息挂在卷这一级、
+      // 只在开头显示一次，不必在每张照片下面重复
+      readerTitle.textContent = [currentRoll.stock, currentRoll.camera, currentRoll.lens, currentRoll.date]
         .filter(function (s) { return s; }).join(' · ');
     }
 
