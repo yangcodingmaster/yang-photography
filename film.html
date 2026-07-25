@@ -253,38 +253,15 @@
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.45s ease;
-      display: flex;
-      flex-direction: column;
       touch-action: pan-y;                /* 竖向留给浏览器，横向手势由 fluid.js 接管 */
       user-select: none;
       -webkit-user-select: none;
     }
     #reader.open { opacity: 1; pointer-events: auto; }
 
-    /* 卷信息"展签"：竖排立在照片左侧的留白里、垂直居中，像画作旁的说明牌。
-       比原来角落里的一细行更容易被看到，又不抢照片的主角位。 */
-    #reader-title {
-      left: 3rem;
-      top: 50%;
-      transform: translateY(-50%);
-      line-height: 2.1;
-      max-width: 12rem;                   /* 太长的相机/镜头名换行，不侵入照片 */
-    }
-    /* 窄屏（照片会占满宽度、左侧没有留白）：收回到左上角，仍是竖排三行 */
-    @media (max-width: 1100px) {
-      #reader-title { left: 2rem; top: 1.75rem; transform: none; }
-    }
-
-    /* 照片区：占满页脚以上的全部空间，片框整体居中 */
-    .page-photo {
-      flex: 1;
-      min-height: 0;
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 4.5rem 1.5rem 0;           /* 顶部让开页头文字 */
-    }
+    /* 说明面板里的空字段自动隐藏（没填就不占位、不留空行）——
+       型号(rt-stock)始终有内容不用管，日期/解释/参数/note 空了就消失 */
+    #rt-date:empty, #rt-desc:empty, #rt-meta:empty, #page-note:empty { display: none; }
 
     /* ── 片框：横片时 [齿孔] [片边字] [照片] [齿孔] 纵向排布 ──
        竖片时齿孔转到左右两侧（物理底片上竖片是横躺的，
@@ -294,6 +271,7 @@
       grid-template-areas: "pa" "edge" "img" "pb";
       padding: 8px 18px 10px;
       cursor: grab;
+      max-width: 100%;                    /* 不超出左侧片框区（flex-1），别压到右侧面板 */
     }
     #perf-a { grid-area: pa; }
     #perf-b { grid-area: pb; }
@@ -317,8 +295,8 @@
     }
     #film-frame img {
       grid-area: img;
-      max-width: min(1100px, 84vw);
-      max-height: calc(100vh - 21rem);
+      max-width: 100%;                    /* 跟随片框区宽度（与 series lightbox 的 max-w-full 一致）*/
+      max-height: calc(100vh - 12rem);    /* 页脚移走了，可以比原来高一些 */
       object-fit: contain;
     }
 
@@ -346,24 +324,13 @@
     }
     #film-frame.f120 .perf { display: none; }
 
-    /* 手机：片框边距收窄，照片限高放宽 */
+    /* 手机：片框边距收窄，照片限高放宽；宽度仍跟随容器（片框区），
+       不再用 88vw —— 上下堆叠布局里容器有内边距，88vw 会溢出屏幕 */
     @media (max-width: 640px) {
       #film-frame { padding: 6px 10px 8px; }
       #film-frame.f120, #film-frame.f120.portrait { padding: 6px 14px 16px; }
-      #film-frame img { max-width: 88vw; max-height: calc(100vh - 18rem); }
+      #film-frame img { max-width: 100%; max-height: 62vh; }
     }
-
-    /* 页脚区：定高贴底（与 Archive 一致），note 在页码上方浮现/消失 */
-    .page-footer {
-      height: 7.2rem;
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-end;
-      padding-bottom: 2.4rem;
-    }
-    #page-note:empty { display: none; }
 
     /* 结束卡也可拖拽（用力一甩 = 收回这卷） */
     #view-end { cursor: grab; }
@@ -425,10 +392,12 @@
 
   <!-- 阅读视图：翻开一卷之后，一次一格 -->
   <!-- 背景纯不透明纸面（不加模糊），与 gallery / series / archive 一致 -->
-  <div id="reader" class="fixed inset-0 z-[100] bg-site-bg">
+  <div id="reader" class="fixed inset-0 z-[100] bg-site-bg flex items-center justify-center">
 
-    <!-- 左侧展签：这卷是什么（型号/相机/镜头/日期，竖排三行，结束卡视图里清空） -->
-    <div id="reader-title" class="absolute text-sm text-site-muted font-display tracking-widest z-10"></div>
+    <!-- 左上角：页码（第几格 / 共几格），与 series lightbox 同位；拖动翻页时不动 -->
+    <div class="absolute top-6 left-8 text-xs text-site-muted tracking-widest z-10">
+      <span id="page-folio"></span>
+    </div>
 
     <!-- 出口（右上角）：与全站一致的"展览出口"指示牌 -->
     <button id="reader-close"
@@ -436,24 +405,37 @@
       → Way out
     </button>
 
-    <!-- 照片区：片框（齿孔 + 片边字 + 照片）整体居中，整体跟手拖动 -->
-    <div class="page-photo" id="page-photo">
-      <div id="film-frame" class="bg-site-text">
-        <div id="perf-a" class="perf"></div>
-        <!-- 片边字用 font-shell：真实底片边缘的印字就是无衬线（与筒身印字同一例外） -->
-        <div id="edge-band" class="font-shell text-site-bg">
-          <span id="edge-stock"></span>
-          <span id="edge-frame"></span>
+    <!-- 图文整体居中：片框在左、说明面板在右（与 series lightbox 同构，整体跟手拖动）-->
+    <div id="view-photo" class="flex flex-col md:flex-row items-center gap-8 md:gap-14 max-w-5xl w-full px-8 md:px-16">
+
+      <!-- 片框区：齿孔 + 片边字 + 照片 -->
+      <div id="page-photo" class="flex-1 flex items-center justify-center min-w-0 w-full">
+        <div id="film-frame" class="bg-site-text">
+          <div id="perf-a" class="perf"></div>
+          <!-- 片边字用 font-shell：真实底片边缘的印字就是无衬线（与筒身印字同一例外） -->
+          <div id="edge-band" class="font-shell text-site-bg">
+            <span id="edge-stock"></span>
+            <span id="edge-frame"></span>
+          </div>
+          <img id="page-img" src="" alt="" draggable="false" />
+          <div id="perf-b" class="perf"></div>
         </div>
-        <img id="page-img" src="" alt="" draggable="false" />
-        <div id="perf-b" class="perf"></div>
       </div>
-    </div>
-    <div class="page-footer">
-      <!-- 自定义文字（data.js 里逐张加 note 字段，没写就整行消失） -->
-      <div id="page-note"  class="font-zh text-base text-site-text tracking-wide"></div>
-      <!-- 页码：只报"第几格 / 共几格"，这卷是什么由左上角负责 -->
-      <div id="page-folio" class="mt-2 text-sm text-site-muted tracking-widest"></div>
+
+      <!-- 说明面板（与 series lightbox 的文字面板同构）：
+           型号 = 标题（相当于作品名）· 日期 · desc = 这卷的一句解释（可选）·
+           相机/镜头 = 参数（相当于 series 的 meta "Sony α6700"）。
+           胶片一卷器材固定，所以这些挂在卷这一级、只显示一次，不在每张照片下重复。
+           空字段由下面的 :empty 规则自动隐藏。 -->
+      <div class="w-full md:w-52 shrink-0 flex flex-col gap-2 font-display">
+        <h2 id="rt-stock" class="text-2xl font-light text-site-text"></h2>
+        <p  id="rt-date"  class="text-xs text-site-muted"></p>
+        <p  id="rt-desc"  class="font-zh text-sm text-site-muted leading-loose mt-1"></p>
+        <p  id="rt-meta"  class="text-xs text-site-muted mt-2"></p>
+        <!-- 每格自己的一句话（note，可选，逐张在 data.js 里加）-->
+        <p  id="page-note" class="font-zh text-sm text-site-muted mt-2"></p>
+      </div>
+
     </div>
 
     <!-- 结束卡：看完最后一格再 → 进入此卡，再 → 即收回这卷，与全站一致 -->
@@ -705,14 +687,19 @@
     // ══ 第二部分：阅读视图 ══════════════════════════════════════
 
     var reader      = document.getElementById('reader');
-    var readerTitle = document.getElementById('reader-title');
     var btnClose    = document.getElementById('reader-close');
+    var viewPhoto   = document.getElementById('view-photo');   // 片框+面板整体（拖动的就是它）
     var photoArea   = document.getElementById('page-photo');
     var filmFrame   = document.getElementById('film-frame');
     var pageImg     = document.getElementById('page-img');
     var edgeStock   = document.getElementById('edge-stock');
     var edgeFrame   = document.getElementById('edge-frame');
-    var pageNote    = document.getElementById('page-note');
+    // 右侧说明面板（与 series lightbox 同构）
+    var rtStock     = document.getElementById('rt-stock');   // 型号 = 标题
+    var rtDate      = document.getElementById('rt-date');
+    var rtDesc      = document.getElementById('rt-desc');     // 这卷的一句解释（可选）
+    var rtMeta      = document.getElementById('rt-meta');     // 相机 · 镜头 = 参数
+    var pageNote    = document.getElementById('page-note');   // 每格自己的一句话（可选）
     var pageFolio   = document.getElementById('page-folio');
     var viewEnd     = document.getElementById('view-end');
 
@@ -774,18 +761,16 @@
     function updateReader() {
       var photos = currentRoll ? currentRoll.photos : [];
       if (currentIndex === photos.length) {          // ── 结束卡视图 ──
-        photoArea.style.display = 'none';
-        pageNote.textContent  = '';
-        pageFolio.textContent = '';
+        viewPhoto.style.display = 'none';            // 片框+面板整体隐藏
+        pageFolio.textContent = '';                  // 页码清空（结束卡不报第几格）
         viewEnd.style.display = 'flex';
-        readerTitle.textContent = '';                // 结束卡里清空卷信息（与全站规矩一致）
         return;
       }
       // ── 照片格 ──
       var p = photos[currentIndex];
       if (!p) return;
       viewEnd.style.display   = 'none';
-      photoArea.style.display = '';
+      viewPhoto.style.display = '';
       // 片框制式：135 齿孔 / 120 素边
       filmFrame.classList.toggle('f120', currentRoll.format === '120');
       pageImg.src = p.src;
@@ -793,14 +778,16 @@
       // 片边字：型号在左，画格编号在右（135 带 A —— 真实底片的画格编号写法）
       edgeStock.textContent = currentRoll.stock;
       edgeFrame.textContent = (currentIndex + 1) + (currentRoll.format === '120' ? '' : 'A');
-      pageNote.textContent  = p.note || '';
       pageFolio.textContent = (currentIndex + 1) + ' / ' + photos.length;
-      // 左侧展签：这卷是什么（型号 / 相机 / 镜头 / 日期，各占一行，空字段跳过）
-      // 胶片一卷用固定的相机 + 镜头 + 胶片，所以这些信息挂在卷这一级、
-      // 竖排成一块"说明牌"立在照片左侧，只在开头显示一次，不在每张照片下重复
-      readerTitle.innerHTML = [currentRoll.stock, currentRoll.camera, currentRoll.lens, currentRoll.date]
-        .filter(function (s) { return s; })
-        .map(function (s) { return '<div>' + s + '</div>'; }).join('');
+      // 右侧说明面板（与 series lightbox 同构）：型号=标题、相机·镜头=参数、
+      // desc=这卷的一句解释；胶片一卷器材固定，所以整卷共用一套、每格只换 note。
+      // 空字段靠 CSS :empty 自动隐藏。
+      rtStock.textContent = currentRoll.stock || '';
+      rtDate.textContent  = currentRoll.date  || '';
+      rtDesc.textContent  = currentRoll.desc  || '';
+      rtMeta.textContent  = [currentRoll.camera, currentRoll.lens]
+        .filter(function (s) { return s; }).join(' · ');
+      pageNote.textContent = p.note || '';           // 每格自己的一句话
     }
 
     // ── 手势 + 翻页动画：全部交给 fluid.js 的滑动控制器 ──────────
@@ -811,10 +798,10 @@
       // 阅读视图打开着才接管手势
       isActive: function() { return reader.classList.contains('open'); },
 
-      // 当前应该跟手移动的视图：片框整体，或结束卡
+      // 当前应该跟手移动的视图：图文整体（片框+面板，与 series 一致），或结束卡
       getView: function() {
         var n = currentRoll ? currentRoll.photos.length : 0;
-        return currentIndex === n ? viewEnd : filmFrame;
+        return currentIndex === n ? viewEnd : viewPhoto;
       },
 
       // 边界：第一格不能再往回；结束卡不能再往前（往前 = 收回这卷）

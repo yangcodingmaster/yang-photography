@@ -1150,6 +1150,7 @@ var allFilms = [
     camera: 'Hasselblad 503CM',
     lens:   '',
     date:   '2024.03',
+    desc:   '',
     photos: [
       { src: 'assets/images/film/2403-gold200-120/01.jpeg', alt: '' },
       { src: 'assets/images/film/2403-gold200-120/02.jpeg', alt: '' },
@@ -1174,6 +1175,7 @@ var allFilms = [
     camera: 'Ricoh GR-S',
     lens:   '',
     date:   '2024.03',
+    desc:   '',
     photos: [
       { src: 'assets/images/film/2403-gold200-135/01.jpeg', alt: '' },
       { src: 'assets/images/film/2403-gold200-135/02.jpeg', alt: '' },
@@ -1222,6 +1224,7 @@ var allFilms = [
     camera: 'Hasselblad 503CM',
     lens:   '',
     date:   '2024.05',
+    desc:   '',
     photos: [
       { src: 'assets/images/film/2405-gold200-120/01.jpeg', alt: '' },
       { src: 'assets/images/film/2405-gold200-120/02.jpeg', alt: '' },
@@ -1246,6 +1249,7 @@ var allFilms = [
     camera: 'Ricoh GR-S',
     lens:   '',
     date:   '2024.05',
+    desc:   '',
     photos: [
       { src: 'assets/images/film/2405-gold200-135/01.jpeg', alt: '' },
       { src: 'assets/images/film/2405-gold200-135/02.jpeg', alt: '' },
@@ -1294,6 +1298,7 @@ var allFilms = [
     camera: 'Canon EOS-1',
     lens:   '',
     date:   '2025.12',
+    desc:   '',
     photos: [
       { src: 'assets/images/film/2512-portra400-135/01.jpeg', alt: '' },
       { src: 'assets/images/film/2512-portra400-135/02.jpeg', alt: '' },
@@ -1342,6 +1347,7 @@ var allFilms = [
     camera: 'FUJI film Quick Snap',
     lens:   '',
     date:   '2026.05',
+    desc:   '',
     photos: [
       { src: 'assets/images/film/2605-fujifilm-135/01.jpeg', alt: '' },
       { src: 'assets/images/film/2605-fujifilm-135/02.jpeg', alt: '' },
@@ -1382,6 +1388,7 @@ var allFilms = [
     camera: 'Canon EOS-1',
     lens:   '',
     date:   '2026.07',
+    desc:   '',
     photos: [
       { src: 'assets/images/film/2607-portra400-135/01.jpeg', alt: '' },
       { src: 'assets/images/film/2607-portra400-135/02.jpeg', alt: '' },
