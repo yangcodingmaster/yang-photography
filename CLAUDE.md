@@ -10,9 +10,9 @@
 | 项目 | 说明 |
 |------|------|
 | **项目名** | 赵洋 个人摄影作品集 |
-| **阶段** | 核心功能完成，8 个 Gallery 系列 + 5 年 Archive 散片已上线，**已部署到 GitHub Pages**，文案待逐张填入 |
-| **托管** | 当前：GitHub Pages（`yangcodingmaster/yang-photography`，https://yangcodingmaster.github.io/yang-photography/ ）<br>迁移中：阿里云国内节点 + 宝塔，域名备案中。**原因：github.io 在国内被运营商屏蔽，分享到微信打不开**，详见"分享卡片与国内部署"一节 |
-| **技术栈** | 纯 HTML + Tailwind CSS（CDN 版）+ 原生 JavaScript |
+| **阶段** | 全站已部署到国内服务器并验证可访问；**域名备案审核中**（2026-07-26 时点），备案通过后配 DNS + HTTPS 即可对外。文案待逐张填入 |
+| **托管** | **腾讯云轻量服务器 + 宝塔面板**（`124.221.92.171`，OpenCloudOS 9.6，2G 内存，PHP 8.2）<br>站点根目录 `/www/wwwroot/yangzhaophoto.com`，部署用 `bash scripts/deploy.sh`（rsync 增量同步）<br>⚠️ GitHub Pages **仍然开着**且从 main 自动构建，详见"两个线上副本"一节 |
+| **技术栈** | 纯 HTML + Tailwind CSS（本地副本）+ 原生 JavaScript；**留言表单额外用到一个 PHP 文件**（服务端唯一的动态部分） |
 | **语言** | 中英双语（目前两种语言同时展示，不做切换按钮） |
 | **照片** | 8 个 Gallery 系列（5 普通 + 3 分章，约 200 张）+ Archive 散片（2021–2025，共 123 张），均为真实作品，已无 demo |
 
@@ -36,7 +36,10 @@
 | Archive 散片 | ✅ 上线 | 2021–2025 五年，共 123 张（可选 note 一句话页脚，作者逐张手填） |
 | 图片压缩 | ✅ 完成 | 全部转为网页尺寸（HEIC→JPEG，长边 2560 / 质量 90） |
 | 路径空格清理 | ✅ 完成 | 全部重命名为连字符形式，可直接部署 |
-| GitHub 仓库 + Pages | ✅ 上线 | `yangcodingmaster/yang-photography`，Pages 已 built |
+| GitHub 仓库 | ✅ | `yangcodingmaster/yang-photography`（**公开仓库**，别往里放任何密钥） |
+| 腾讯云部署 | ✅ 已验证 | 736 个文件与本地逐一致，512 张图 md5 全等；`scripts/deploy.sh` 增量同步 |
+| `message.js` + `api/message.php` 留言表单 | ✅ 上线 | 访客写 → Resend 直接寄到作者邮箱，不存储、不公开显示 |
+| HTTPS / 域名解析 | ⬜ 待备案 | 现在只有 80 端口，域名无 A 记录。**微信抓分享图要求 https** |
 | `add-gallery-series` skill | ✅ 完成 | 固化"加 Gallery 系列"工作流，见下方"配套 skill" |
 | 交互升级（fluid.js） | ✅ 完成 | Apple 流体交互：1:1 跟手拖拽、橡皮筋边界、方向感换图、按压态、滚动浮现、reduced-motion（`interaction-design` 分支开发） |
 | 填写真实文案 | ⬜ 进行中 | 各系列 descZh/descEn、照片 caption/desc、关于页（作者逐张手填） |
@@ -75,8 +78,16 @@
 ├── data.js                 # ⭐ 唯一的数据文件，所有内容只改这里
 │                           #    包含：allSeries、allPhotos、allChapters、allArchive、allFilms
 ├── fluid.js                # 弹簧动画 + 滑动手势引擎（零依赖手写，series / archive / film 三处阅读视图共用）
+├── message.js              # 留言表单的前端（四个页面共用一份，自己注入按钮和浮层）
+│
+├── api/                    # 服务端（全站唯一需要 PHP 的地方）
+│   ├── message.php         #    收表单 → 调 Resend 发到作者邮箱。不存储任何东西
+│   ├── config.sample.php   #    配置模板，不含密钥，可以进 git
+│   └── README.md           #    服务器安装手册（这两个文件被 deploy.sh 排除，不上公网）
+│                           #    ⚠️ 真密钥在服务器的 /www/site-secrets/config.php，不在仓库里
 │
 ├── scripts/                # 维护脚本（不是网站的一部分，不影响访客）
+│   ├── deploy.sh           #    ⭐ 日常部署就这一条：rsync 增量同步到腾讯云
 │   ├── share-card.html     #    分享缩略图的"模具"，浏览器截图用
 │   ├── make-share-card.sh  #    换分享图照片时跑它
 │   ├── set-domain.py       #    换域名时跑它（往 og 标签注入真实域名）
@@ -253,6 +264,30 @@
 - 左侧个人照片（`assets/images/profile.jpg`），右侧双语介绍
 - 拍摄方向标签（可增减）
 - Email + Instagram 链接
+
+### 留言表单（`message.js` + `api/message.php`）
+
+**它是表单，不是留言板。** 访客写的话直接寄到作者邮箱，服务器上不存、网站上不显示。
+（曾经做过带存储 + 先审后发的留言板，2026-07-26 按作者要求砍掉了，别再加回来。）
+
+- **入口**：首页 / Gallery / Archive / Film 四页，各放一个 `<div id="message-slot">`
+  占位 + 一行 `<script src="message.js">`。按钮和浮层全部由 JS 生成，改一处四页同步
+  - `data-style="footer"` = 按钮居中放页面底部（Gallery / Archive / Film）
+  - `data-style="float"` = 浮在右下角（首页：全屏轮播、不滚动，没有"底部"可放）
+- **浮层**与 series / archive / film 的阅读视图同构：`fixed inset-0` 纸面底 +
+  右上角 `→ Way out` + Esc 退出。三个字段：名字（可不填）、邮箱（可不填）、正文
+- **浮层在页面加载时就建好藏着**，不是点击时才建 —— Tailwind 运行时靠观察 DOM
+  现生成样式，有约一帧延迟，等点击才建会闪一下裸样式。别改回懒创建
+- **寄出失败必须如实告诉访客**：什么都不存，发不出去就是彻底丢了。代码里
+  发送失败返回 502 且前端保留已填内容，**不要为了"体验好"改成假装成功**
+- 对方留了邮箱就设成邮件的 `reply_to`，作者在邮箱里点"回复"即可回信
+- **防护**：蜜罐字段 + 同 IP 60 秒冷却（靠系统临时目录的文件时间戳，无需配置）
+  + 正文 2000 字 / 名字 40 字上限 + 非字符串输入清洗 + 邮件内容全部转义后再拼
+- **密钥永远不进仓库**：Resend 的 key 在服务器的 `/www/site-secrets/config.php`，
+  网站目录之外（公网访问不到，且 `deploy.sh` 的 `--delete` 够不着）。
+  安装步骤见 `api/README.md`
+- **体检接口**：`/api/message.php?action=selftest&token=…`（token 在上面那个配置文件里），
+  一次列出 PHP 版本、扩展、配置、邮箱等八项状态，排障从这里开始
 
 ---
 
@@ -478,11 +513,13 @@ var allFilms = [
 
 ## 分享卡片与国内部署
 
-### 为什么要迁到国内节点
+### 为什么迁到了国内节点（已完成）
 
 `github.io` 在工信部黑名单上，国内运营商（尤其移动）普遍屏蔽。后果有两层：
 微信服务器抓不到 `og:image`（卡片没图），以及**朋友点开是白屏**。卡片做得再好看，
 打不开就是负面效果。所以域名 + 国内节点是这件事的前提，不是可选项。
+
+2026-07 已迁到腾讯云轻量服务器 + 宝塔，站点验证可访问，只等域名备案。
 
 ### 境外依赖已全部本地化（⚠️ 别改回在线引用）
 
@@ -533,14 +570,61 @@ iMessage 都读**，改一次全平台受益。
 - **照片比网站上相对更大**是有意的：网站那种奢侈留白在百来像素下会显得空、不抓眼
 - 模具支持三种版式：`center`（当前用）、`polaroid`（照片偏上下方厚边）、`icon`（做图标）
 
-### 上线流程（域名备案通过后）
+### 日常部署（已上线，这是现在的做法）
 
-1. `python3 scripts/set-domain.py 你的域名` —— 把占位域名换成真的。
-   **不做这步卡片就没图**，因为 og:image 还指向 www.example.com
-2. 宝塔建站，根目录 `/www/wwwroot/域名`，把整个项目打包上传解压，
-   确认 `index.html` 在根目录而不是子文件夹里
-3. 宝塔 → SSL → 免费证书申请 → 打开"强制 HTTPS"（微信抓图要求 https）
-4. 验证：把网址发到微信"文件传输助手"，看卡片。没图或还是旧的就在网址后加 `?v=2`
+```bash
+bash scripts/deploy.sh              # 正式同步
+bash scripts/deploy.sh --dry-run    # 演习：只列清单不真传
+```
+
+rsync 增量同步到腾讯云，**只传变化的部分** —— 改几行文案就是几 KB、一两秒。
+（对比：早期用宝塔传 zip 是每次 600MB，还得解压，且传丢过 12 个文件。）
+
+**三个必须知道的点：**
+
+1. **`--delete` 让服务器成为本地的镜子** —— 服务器上有、本地没有的一律删掉。
+   所以密钥和任何"只在服务器上产生"的东西都必须放在站点根目录**外面**
+   （现在只有 `/www/site-secrets/config.php` 属于这类）
+2. **`api/README.md` 和 `api/config.sample.php` 被排除**，不上公网 ——
+   它们不含密钥，但写着密钥存放路径和防护细节，没必要公开
+3. **rsync 以 root 跑，同步上去的文件属主是本地用户 ID（501）而非 `www`**。
+   权限 644 所以 Nginx / PHP 读得到，功能正常；想归位可加 `--chown=www:www`
+
+### 服务器上已经配好的（换服务器时要重做）
+
+| 项 | 状态 |
+|---|---|
+| 站点 PHP 版本 | PHP-82（**不能是「纯静态」**，否则 .php 会被当文本吐出源码） |
+| 防跨站攻击 (open_basedir) | **已关闭** —— 开着的话 PHP 读不到站点目录外的密钥文件 |
+| `/www/site-secrets/config.php` | `640 root:www`，含 Resend key 和体检口令 |
+| SSH | 已配公钥免密登录（`deploy.sh` 依赖它） |
+
+### 备案通过后还剩三步
+
+1. 腾讯云 DNSPod 加 A 记录：`yangzhaophoto.com` → `124.221.92.171`
+2. 宝塔 → SSL → 免费证书 → 打开"强制 HTTPS"（**微信抓分享图要求 https**）
+3. Resend 后台验证 `yangzhaophoto.com` 域名，把服务器配置里的 `MAIL_FROM`
+   从 `onboarding@resend.dev` 换成自己域名的地址（降低进垃圾箱概率）
+
+然后把网址发到微信"文件传输助手"验证卡片；没图或还是旧的就在网址后加 `?v=2` 强制重抓。
+
+> og 占位域名已于 2026-07-26 替换为 `https://yangzhaophoto.com`（12 处），这步不用再做。
+
+### ⚠️ 两个线上副本
+
+**GitHub Pages 仍然开着**，从 `main` 分支自动构建，也就是说每次 push 都会更新
+`https://yangcodingmaster.github.io/yang-photography/`。于是同一个站有两个线上副本，
+它们的行为**不一样**：
+
+| | 腾讯云（正式） | GitHub Pages |
+|---|---|---|
+| 国内能否打开 | 能 | ❌ github.io 被屏蔽 |
+| 留言表单 | 正常 | ❌ **坏的**：静态托管不跑 PHP，点寄出必失败 |
+| `api/message.php` | 被执行 | ⚠️ 被当纯文本吐出源码（不含密钥，但暴露设计细节） |
+
+**这是个待决问题，不是已解决状态。** 三个选项：关掉 Pages（推荐——当初迁走就是因为
+它在国内打不开）、留着当境外镜像但接受留言表单是坏的、或给 Pages 做优雅降级。
+作者未拍板前不要擅自关闭。
 
 ---
 
@@ -636,9 +720,15 @@ tailwind.config = {
 - 新增内容前先确认和设计系统的颜色/字体变量一致
 - 路径统一用相对路径
 - 响应式：手机端优先
+- 改完线上相关的东西，用 `bash scripts/deploy.sh --dry-run` 先看清单再真跑
 
 ### 禁止做
-- 不引入 npm 包或需要构建的工具（保持零构建）
+- 不引入 npm 包或需要构建的工具（保持零构建。`api/message.php` 是单文件 PHP，
+  不需要 composer、不需要构建，没有破坏这条原则）
+- **任何密钥、API key、口令都不许进仓库、不许进聊天、不许写死在代码里**。
+  它们只存在于服务器的 `/www/site-secrets/config.php`。
+  需要生成口令时在服务器上跑 `openssl rand -hex 24`，别把值打印出来
+- **不给公开仓库提交服务器密码或私钥**（`yangcodingmaster/yang-photography` 是公开仓库）
 - 不用 `style=""` 内联样式（JS 动态控制 display/transform 除外）
 - 不把颜色值硬编码在 class 里（用 `text-site-muted` 而不是 `text-[#8a8a85]`）
 - 不在没有说明的情况下改动设计系统
@@ -661,22 +751,31 @@ tailwind.config = {
 
 ## 待办 / 未来可能的方向
 
-### 近期待完成
-- [ ] **⚠️ 域名备案通过后，第一件事：`python3 scripts/set-domain.py 你的域名`**
-      现在 og 标签里是占位域名 `www.example.com`，不换掉分享卡片就没有缩略图
-- [ ] 迁到阿里云国内节点（宝塔建站 → 上传 → 申请 SSL → 强制 HTTPS），
-      流程见"分享卡片与国内部署"一节
-- [ ] 关于页文案填好后，同步改 `about.html` 的 `og:description`
+> 已完成的条目直接删除，不留划线记录 —— 历史在 git 里，这份文件只回答"现在还差什么"。
+
+### 阻塞中（等外部）
+- [ ] **域名备案**审核中。通过后三步：DNS A 记录 → 宝塔申请 SSL + 强制 HTTPS →
+      Resend 验证发件域名。详见"备案通过后还剩三步"
+
+### 待作者决定
+- [ ] **GitHub Pages 怎么处理** —— 现在是第二个线上副本且留言表单是坏的，
+      见"两个线上副本"一节。建议关掉
+- [ ] 服务器 SSH 是否关闭密码登录 —— 2026-07-26 查得 `PasswordAuthentication yes`
+      且 24 小时内有 154 次密码爆破尝试。公钥登录已配好，关掉密码即可归零；
+      兜底是腾讯云控制台的 VNC 登录
+
+### 待填文案（只有作者本人能做）
+- [ ] 各系列 `descZh` / `descEn`，照片 `caption` / `date` / `location` / `desc` / `meta`
+- [ ] 关于页自我介绍；填好后同步改 `about.html` 的 `og:description`
       （现在是占位的"关于我，以及联系方式。"）
-- [ ] Film 逐卷填 `title`（作品名）/ `desc`（一句解释）/ `lens`（镜头），都可选、留空自动隐藏
-- [ ] Film 上线后考虑：首页轮播是否纳入 Film 照片（暂不纳入）
-- [ ] 填写真实文案（各系列 descZh/descEn，照片 caption/date/location/desc/meta，逐张手填）
-- [ ] 填写关于页自我介绍
-- [x] ~~往 Archive 放散片（2021–2025 已录入）~~
-- [x] ~~创建 GitHub 仓库并部署到 GitHub Pages~~（已上线）
-- [x] ~~分享卡片（Open Graph）+ favicon + 境外依赖本地化~~（`share-card` 分支）
-- [x] ~~Film 录入 7 卷真实胶卷（181 张，替换演示数据）+ 相机型号~~（`film-exhibit` 分支）
-- [x] ~~Film 阅读视图统一成 gallery 图文布局（作品名 / 解释 / 参数行）~~
+- [ ] Film 逐卷填 `title` / `desc` / `lens`（都可选，留空自动隐藏）
+
+### 待观察
+- [ ] 首页轮播是否纳入 Film 照片（暂不纳入）
+- [ ] 网站有真实访问量之后再考虑装统计（2026-07-26 查日志：三天 258 次请求，
+      **全部是境外扫描机器人**，零真人页面访问，所以现在装统计工具没有意义）。
+      到时候首选 GoAccess：读 Nginx 日志出单文件 HTML 报表，不改网站、不用数据库、
+      不把数据交给第三方。⚠️ 别用 Google Analytics —— 它在国内被墙，收不到主要受众
 
 ### 未来可能的方向
 > 现阶段不实现，等需求明确后再讨论。

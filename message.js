@@ -42,7 +42,10 @@
     /* 系统开了"减弱动态效果"：不做缩放 */
     '@media (prefers-reduced-motion: reduce) {' +
       '#message-slot .pressable:active, #msg-close:active, #msg-submit:active {' +
-        'transform: none; } }';
+        'transform: none; } }' +
+    /* 蜜罐字段：挪出屏幕而不是 display:none —— 有些机器人会跳过隐藏字段，
+       但会老老实实填这种"看不见却存在"的输入框 */
+    '#msg-website { position: absolute; left: -9999px; width: 1px; height: 1px; }';
   document.head.appendChild(css);
 
 
@@ -117,9 +120,9 @@
             'focus:border-site-text transition-colors"></textarea>' +
 
           // 蜜罐：藏起来的输入框。真人看不见也就不会填，填了的一定是机器人。
-          // 用 position:absolute 挪出屏幕而不是 display:none —— 有些机器人会跳过隐藏字段
+          // 怎么藏的写在上面那段 CSS 里（项目规则：不写内联 style）
           '<input id="msg-website" type="text" tabindex="-1" autocomplete="off" ' +
-            'style="position:absolute;left:-9999px;width:1px;height:1px" aria-hidden="true" />' +
+            'aria-hidden="true" />' +
 
           '<div class="mt-6 flex items-center justify-between gap-4">' +
             '<span id="msg-hint" class="font-zh text-xs text-site-muted"></span>' +
