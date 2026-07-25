@@ -5,7 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Film — Yang Photography</title>
 
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- ── 分享卡片 + 网站图标（与其他页面一致，详见 CLAUDE.md"分享卡片"一节）
+       ⚠️ og:url / og:image 目前是占位域名，域名下来后跑 scripts/set-domain.py 一并替换 -->
+  <meta name="description" content="七卷胶卷，一卷是一个时间胶囊。" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Yang Photography" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:title" content="胶卷档案 · 赵洋摄影" />
+  <meta property="og:description" content="七卷胶卷，一卷是一个时间胶囊。" />
+  <meta property="og:url" content="https://www.example.com/film.html" />
+  <meta property="og:image" content="https://www.example.com/assets/images/share/share-card.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="1200" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
+  <!-- Tailwind 运行时（本地副本）：国内节点访问 cdn.tailwindcss.com 不稳定，
+       一旦加载失败整站会退化成没有样式的裸文字，所以放在自己服务器上 -->
+  <script src="assets/vendor/tailwind.js"></script>
 
   <script>
     tailwind.config = {
@@ -32,8 +50,9 @@
     }
   </script>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet" />
+  <!-- 字体（本地副本）：fonts.googleapis.com 在国内访问不到，在线引用会让
+       中英文字体全部回退成系统默认字体。文件由 scripts/fetch-fonts.py 抓取 -->
+  <link href="assets/vendor/fonts.css" rel="stylesheet" />
 
   <style>
     /* ════════════════════════════════════════════════════════
