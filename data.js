@@ -1147,7 +1147,7 @@ var allFilms = [
     stock:  'Kodak Gold 200',
     label:  'GOLD 200',
     format: '120',
-    camera: '',
+    camera: 'Hasselblad 503CM',
     lens:   '',
     date:   '2024.03',
     photos: [
@@ -1171,7 +1171,7 @@ var allFilms = [
     stock:  'Kodak Gold 200',
     label:  'GOLD 200',
     format: '135',
-    camera: '',
+    camera: 'Ricoh GR-S',
     lens:   '',
     date:   '2024.03',
     photos: [
@@ -1219,7 +1219,7 @@ var allFilms = [
     stock:  'Kodak Gold 200',
     label:  'GOLD 200',
     format: '120',
-    camera: '',
+    camera: 'Hasselblad 503CM',
     lens:   '',
     date:   '2024.05',
     photos: [
@@ -1243,7 +1243,7 @@ var allFilms = [
     stock:  'Kodak Gold 200',
     label:  'GOLD 200',
     format: '135',
-    camera: '',
+    camera: 'Ricoh GR-S',
     lens:   '',
     date:   '2024.05',
     photos: [
@@ -1291,7 +1291,7 @@ var allFilms = [
     stock:  'Kodak Portra 400',
     label:  'PORTRA 400',
     format: '135',
-    camera: '',
+    camera: 'Canon EOS-1',
     lens:   '',
     date:   '2025.12',
     photos: [
@@ -1339,7 +1339,7 @@ var allFilms = [
     stock:  'Fujifilm',
     label:  'FUJIFILM',
     format: '135',
-    camera: '',
+    camera: '一次性相机',
     lens:   '',
     date:   '2026.05',
     photos: [
@@ -1379,7 +1379,7 @@ var allFilms = [
     stock:  'Kodak Portra 400',
     label:  'PORTRA 400',
     format: '135',
-    camera: '',
+    camera: 'Canon EOS-1',
     lens:   '',
     date:   '2026.07',
     photos: [
