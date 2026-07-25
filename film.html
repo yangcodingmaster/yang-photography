@@ -78,8 +78,8 @@
                   opacity 0.4s ease;
     }
     /* hover 抽片头只给有光标的设备；触屏走两步交互（.preview 居中 → 再点翻开） */
-    @media (hover: hover) { .bay:hover { width: calc(var(--w) * 1px + 220px); } }
-    .bay.active, .bay.preview { width: calc(var(--w) * 1px + 220px); }
+    @media (hover: hover) { .bay:hover { width: calc(var(--w) * 1px + var(--lw) * 1px); } }
+    .bay.active, .bay.preview { width: calc(var(--w) * 1px + var(--lw) * 1px); }
 
     /* 筒的裁切窗：筒身固定在左缘，片头藏在筒身右侧，靠 overflow:hidden 裁掉；
        bay 展宽的过程就是"片头被抽出来" */
@@ -183,11 +183,11 @@
       position: absolute;
       left: calc(var(--cw) * 1px - 2px);  /* 与筒身衔接（盖掉一条描边） */
       bottom: 4px;
-      width: 220px;
+      width: calc(var(--lw) * 1px);       /* 抽出长度：135 长条 / 120 近方 */
       height: calc(var(--sh) * 1px);
       display: flex;
       flex-direction: column;
-      transform: translateX(-220px);      /* 收起：整条藏进筒后 */
+      transform: translateX(calc(var(--lw) * -1px));   /* 收起：整条藏进筒后 */
       transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
     }
     @media (hover: hover) { .bay:hover .leader { transform: translateX(0); } }
@@ -231,6 +231,10 @@
       object-fit: cover;
     }
     .leader.f120 { padding: 7px 0; }      /* 120：无齿孔，上下素黑边 */
+    /* 120 是方画幅：无齿孔（收掉那两条空齿孔带的占高），左右黑边收到和上下
+       一样（7px），这样露出的照片才是正方形而不是被齿孔挤扁的宽条 */
+    .leader.f120 .perf { display: none; }
+    .leader.f120 .strip-img { margin: 0 7px; }
 
     /* ── 打开某卷时：其余的筒（连同脚下日期）淡出收拢，别的排整排淡出 ── */
     #cabinet.opening .film-row:not(.has-active) { opacity: 0; pointer-events: none; }
@@ -457,10 +461,12 @@
     // 尺寸整体放大过一轮：15 寸屏上要能直接读出筒身型号（作者要求，别缩回去）
     var TONGUE_W = 16;
     var FORMAT_DIMS = {
-      '135': { cw: 68, bh: 100, h: 112, sh: 88, w: 68 + TONGUE_W },
-      '120': { cw: 70, bh: 122, h: 122, sh: 108, w: 70 },
+      // lw = 片头抽出的长度：135 是横条片头（长），120 是方画幅 6×6，
+      //      片头也该接近正方形（≈ sh），不能跟 135 一样拉成宽长条
+      '135': { cw: 68, bh: 100, h: 112, sh: 88,  w: 68 + TONGUE_W, lw: 220 },
+      '120': { cw: 70, bh: 122, h: 122, sh: 108, w: 70,            lw: 108 },
     };
-    var LEADER_W = 220;   // 片头抽出的长度（与 CSS 里的展开宽度一致）
+    var LEADER_W = 220;   // 兜底值：dims 里没给 lw 时用（正常都从 --lw 读）
 
     // ── 真实胶片壳配色开关（作者已采纳）─────────────────────────
     // true  = 筒身穿各型号真实品牌配色（黑壳黄条的柯达 Professional 系 / 金黄 Gold / 富士绿 Superia）
@@ -539,6 +545,7 @@
         bay.style.setProperty('--cw', dims.cw);
         bay.style.setProperty('--bh', dims.bh);
         bay.style.setProperty('--sh', dims.sh);
+        bay.style.setProperty('--lw', dims.lw);   // 片头抽出长度（135 长条 / 120 近方）
 
         // 筒身：135 = 片轴头 + 竖排型号；120 = 纸封卷 + 型号横贴腰带（印字 = label 字段）
         // 两套皮肤（几何完全相同，只换颜色）：
@@ -644,7 +651,9 @@
       var gap = 14;
       var widths = slots.map(function (s) {
         var w = parseFloat(s.style.getPropertyValue('--w'));
-        return (s === slot) ? w + LEADER_W : w;
+        // 展开后要加的片头长度按格式走（135 长 / 120 近方），别再用固定 220
+        var lw = parseFloat(s.style.getPropertyValue('--lw')) || LEADER_W;
+        return (s === slot) ? w + lw : w;
       });
       var idx = slots.indexOf(slot);
       var before = 0;
