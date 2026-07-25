@@ -191,7 +191,7 @@
   - **流体手势**（fluid.js）：与 series.html 完全一致的 1:1 跟手拖拽 + 橡皮筋 + 惯性决策；结束卡上用力一甩 = 合上书
 - 年份内顺序 = 数组顺序：把新照片放数组前面 = 最新在最前面；封面图 = 当年数组第一张
 
-### Film 页 `film.html`（胶卷柜式，`film-exhibit` 分支开发中）
+### Film 页 `film.html`（胶卷柜式）
 - 胶卷档案，与 Gallery / Archive 平级的第三种浏览维度：按物质载体看（一卷胶片 = 一个时间胶囊）
 - 数据来自 `data.js` 的 `allFilms`（数组，每个元素一卷）；页面自动按 `stock` 分组成一排排搁板，
   排的顺序 = 型号在数组里首次出现的顺序
@@ -227,15 +227,26 @@
   - 筒有极轻按压态（scale 0.99，支点在底边）；滚动浮现（fluidReveal）
   - ⚠️ 片头封面图**不能加 `loading="lazy"`**：片头藏在 overflow:hidden 里被视作不可见，
     懒加载永不触发，fluidReveal 等不到图片解码、筒就永远不浮现（已踩过的坑）
-- 点击筒 = **翻开进入片框阅读视图**（一次一格，结构与 Archive 阅读视图一致）：
+- 点击筒 = **翻开进入片框阅读视图**（一次一格，**图文布局与 series.html 的 Lightbox 同构**）：
+  - **片框在左、说明面板在右、垂直居中**（`#view-photo` = `flex md:flex-row items-center`，
+    与 series 的 `view-photo` 一套写法）；拖动翻页时**图文整体（片框+面板）一起位移**
+    （fluid.js 的 `getView()` 返回 `#view-photo`，与 series 完全一致）
   - 照片嵌在深色片框（`bg-site-text`）里：135 上下两排齿孔；120 无齿孔、素黑宽边（`f120` 类）
   - **片边字**：型号在左（大写 + 拉宽字距），画格编号在右（135 带 A 如 `3A`——真实底片写法；120 纯数字）
   - **竖片自适应**：照片加载后按 naturalWidth/Height 判断，竖片时齿孔转到左右两侧、片边字横贯顶部
     （物理底片上竖片是横躺的，完全还原就得歪头看——拟物让位于可用性）
-  - 片框 CSS 关键点：齿孔带用 `width:0 + min-width:100%` 不参与格宽计算（预填几十颗齿孔会把格子撑满全屏）
-  - 左上角常驻：`型号 · 相机 · 时间`（空字段自动跳过；结束卡视图清空）
-  - 页脚：可选 note + 页码 `n / N`；右上角 `→ Way out`；无箭头按钮、无提示文字（全站约定）
-  - 不循环 / 结束卡 / 键盘 ← → Esc / 照片区左右半边点击 / 流体手势（fluid.js，拖动的是整个片框）——全部与 Archive 一致
+  - 片框 CSS 关键点：齿孔带用 `width:0 + min-width:100%` 不参与格宽计算（预填几十颗齿孔会把格子撑满全屏）；
+    片框 + 图片 `max-width:100%` 跟随片框区（`flex-1`），别压到右侧面板（这是 gallery 式布局后的约束）
+  - **右侧说明面板层次**（与 series 的文字面板同构，空字段靠 `:empty` 自动隐藏）：
+    `title`（作品名，作者自定义，大标题=相当于 series 的 caption）→
+    `desc`（这卷一句解释=相当于 series 的 desc）→
+    参数行「型号 · 相机 · 镜头 · 日期」（固定技术信息成组，相当于 series 的 meta "Sony α6700"）→
+    每格可选 `note`（那一格自己的一句话）。
+    **型号和日期不占标题位**（它们是固定技术信息，不是创作标题）——这是 film 和 gallery 的关键区别
+  - **左上角**：页码 `n / N`（与 series 计数器同位，拖动时不动）；**右上角** `→ Way out`；
+    无箭头按钮、无提示文字（全站约定）
+  - 120 抽出的片头是**正方形**（匹配 6×6 方画幅，`--lw` 按格式区分：135=220 长条 / 120=108 近方）
+  - 不循环 / 结束卡 `view-end` / 键盘 ← → Esc / 照片区左右半边点击 / 流体手势——全部与 series 一致
 - 卷内顺序 = 数组顺序 = 拍摄顺序；片头预览图 = 这卷数组第一张
 
 ### 关于页 `about.html`
@@ -390,6 +401,8 @@ var allFilms = [
 | 照片故事/说明 | `data.js` → 每张的 `desc` |
 | 相机、胶卷信息 | `data.js` → 每张的 `meta` |
 | 章节标题 | `data.js` → `allChapters` 里对应章节的 `titleZh` / `titleEn` |
+| Film 某卷作品名 / 一句解释 | `data.js` → `allFilms` 对应卷的 `title` / `desc`（可留空） |
+| Film 某卷相机 / 镜头 | `data.js` → `allFilms` 对应卷的 `camera` / `lens`（一卷器材固定） |
 | 关于页自我介绍 | `about.html` 直接找中文段落修改 |
 | 网站标题（浏览器标签）| 各 `.html` 文件的 `<title>` 标签 |
 | 导航栏名字 "Yang" | 各 `.html` 文件的 `<nav>` 里的 Logo 链接 |
@@ -425,9 +438,12 @@ var allFilms = [
 
 ### 如何往 Film 加一卷
 
-1. 在 `assets/images/film/` 下建文件夹，名字 = 这卷的 `id`（型号缩写-序号，如 `portra400-03`）
-2. 照片按**这卷的拍摄顺序**命名 `01.jpeg`、`02.jpeg`…放进去（HEIC 先转 JPEG，压缩标准同全站）
-3. 在 `data.js` 的 `allFilms` 数组里照抄任意一卷的格式加一段（id / stock / label / format / camera / date / photos）
+1. 在 `assets/images/film/` 下建文件夹，名字 = 这卷的 `id`，命名约定 **年月-型号-格式**
+   （连字符、URL 安全，如 `2403-gold200-135`、`2605-fujifilm-135`）
+2. 照片按**这卷的拍摄顺序**命名 `01.jpeg`、`02.jpeg`…放进去（HEIC/BMP 先转 JPEG，压缩标准同全站）
+3. 在 `data.js` 的 `allFilms` 数组里照抄任意一卷的格式加一段：
+   id / stock / label / format / camera / **lens** / date / **title** / **desc** / photos
+   （lens/title/desc 可留空自动隐藏；⚠️ 新型号需在 film.html 的 `SHELL_STYLES` 补一行配色）
 4. 同型号的卷会自动归到同一排搁板；新型号 = 柜子里自动多一排；
    **同排内把卷按时间先后排在数组里**（早的在前 = 站在左边），日期精确到月（如 `2024.06`）
 5. 刷新 `film.html`（浏览器缓存 data.js 时用 Cmd+Shift+R 硬刷新）
@@ -633,7 +649,8 @@ tailwind.config = {
   **唯一例外（与品牌色例外同一条原则——"物"是内容，界面是设计系统）**：Film 页"物体表面的印字"
   用 `font-shell` = 系统无衬线栈（`"Helvetica Neue", Arial, sans-serif`，零加载，真实暗盒印的就是这一路字）。
   只允许出现在三处：135 筒身竖排印字、120 腰带印字、阅读视图片边字。
-  筒脚日期、左上角卷信息、页码、note 等界面文字一律仍是 Cormorant，不得扩散
+  筒脚日期、面板卷信息（作品名/解释/参数行）、页码、note 等界面文字一律走界面字体
+  （Cormorant / 中文 Noto Serif），不得扩散到 font-shell
 
 ### 每次任务结束后报告
 1. 改了什么文件
