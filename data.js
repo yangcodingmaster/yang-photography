@@ -145,6 +145,7 @@ var allPhotos = {
       caption:  '中央电视台',
       date:     '2024 年 8 月',
       location: '国贸｜北京',          // 拍摄地点，如：'北京' 或 '上海'
+      title:  '',
       desc:     '在酒吧',
       meta:     'Sony α6700',          // 相机/胶卷，如：'Contax T2 · Kodak Portra 400'
     },
@@ -1150,6 +1151,7 @@ var allFilms = [
     camera: 'Hasselblad 503CM',
     lens:   '',
     date:   '2024.03',
+    title:  '',
     desc:   '',
     photos: [
       { src: 'assets/images/film/2403-gold200-120/01.jpeg', alt: '' },
@@ -1175,6 +1177,7 @@ var allFilms = [
     camera: 'Ricoh GR-S',
     lens:   '',
     date:   '2024.03',
+    title:  '',
     desc:   '',
     photos: [
       { src: 'assets/images/film/2403-gold200-135/01.jpeg', alt: '' },
@@ -1224,6 +1227,7 @@ var allFilms = [
     camera: 'Hasselblad 503CM',
     lens:   '',
     date:   '2024.05',
+    title:  '',
     desc:   '',
     photos: [
       { src: 'assets/images/film/2405-gold200-120/01.jpeg', alt: '' },
@@ -1249,6 +1253,7 @@ var allFilms = [
     camera: 'Ricoh GR-S',
     lens:   '',
     date:   '2024.05',
+    title:  '',
     desc:   '',
     photos: [
       { src: 'assets/images/film/2405-gold200-135/01.jpeg', alt: '' },
@@ -1298,6 +1303,7 @@ var allFilms = [
     camera: 'Canon EOS-1',
     lens:   '',
     date:   '2025.12',
+    title:  '',
     desc:   '',
     photos: [
       { src: 'assets/images/film/2512-portra400-135/01.jpeg', alt: '' },
@@ -1347,6 +1353,7 @@ var allFilms = [
     camera: 'FUJI film Quick Snap',
     lens:   '',
     date:   '2026.05',
+    title:  '',
     desc:   '',
     photos: [
       { src: 'assets/images/film/2605-fujifilm-135/01.jpeg', alt: '' },
@@ -1388,6 +1395,7 @@ var allFilms = [
     camera: 'Canon EOS-1',
     lens:   '',
     date:   '2026.07',
+    title:  '',
     desc:   '',
     photos: [
       { src: 'assets/images/film/2607-portra400-135/01.jpeg', alt: '' },

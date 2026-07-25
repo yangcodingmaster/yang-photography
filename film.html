@@ -260,8 +260,8 @@
     #reader.open { opacity: 1; pointer-events: auto; }
 
     /* 说明面板里的空字段自动隐藏（没填就不占位、不留空行）——
-       型号(rt-stock)始终有内容不用管，日期/解释/参数/note 空了就消失 */
-    #rt-date:empty, #rt-desc:empty, #rt-meta:empty, #page-note:empty { display: none; }
+       作品名/解释/参数/note 任一没内容就消失（参数行一般都有型号，不会空）*/
+    #rt-title:empty, #rt-desc:empty, #rt-meta:empty, #page-note:empty { display: none; }
 
     /* ── 片框：横片时 [齿孔] [片边字] [照片] [齿孔] 纵向排布 ──
        竖片时齿孔转到左右两侧（物理底片上竖片是横躺的，
@@ -423,15 +423,17 @@
       </div>
 
       <!-- 说明面板（与 series lightbox 的文字面板同构）：
-           型号 = 标题（相当于作品名）· 日期 · desc = 这卷的一句解释（可选）·
-           相机/镜头 = 参数（相当于 series 的 meta "Sony α6700"）。
-           胶片一卷器材固定，所以这些挂在卷这一级、只显示一次，不在每张照片下重复。
+           title = 作品名（作者自定义，相当于 series 的 caption）·
+           desc = 这卷的一句解释（可选）·
+           参数行 = 型号 · 相机 · 镜头 · 日期（全是固定技术信息，成组放底部，
+                    相当于 series 的 meta "Sony α6700"）。
+           —— 与 gallery 的区别：胶片型号和日期是固定的、不是创作标题，
+              所以不占标题位，标题留给作者自定义的作品名。
            空字段由下面的 :empty 规则自动隐藏。 -->
       <div class="w-full md:w-52 shrink-0 flex flex-col gap-2 font-display">
-        <h2 id="rt-stock" class="text-2xl font-light text-site-text"></h2>
-        <p  id="rt-date"  class="text-xs text-site-muted"></p>
+        <h2 id="rt-title" class="font-zh text-2xl font-light text-site-text"></h2>
         <p  id="rt-desc"  class="font-zh text-sm text-site-muted leading-loose mt-1"></p>
-        <p  id="rt-meta"  class="text-xs text-site-muted mt-2"></p>
+        <p  id="rt-meta"  class="text-xs text-site-muted mt-2 leading-relaxed"></p>
         <!-- 每格自己的一句话（note，可选，逐张在 data.js 里加）-->
         <p  id="page-note" class="font-zh text-sm text-site-muted mt-2"></p>
       </div>
@@ -695,10 +697,9 @@
     var edgeStock   = document.getElementById('edge-stock');
     var edgeFrame   = document.getElementById('edge-frame');
     // 右侧说明面板（与 series lightbox 同构）
-    var rtStock     = document.getElementById('rt-stock');   // 型号 = 标题
-    var rtDate      = document.getElementById('rt-date');
+    var rtTitle     = document.getElementById('rt-title');   // 作品名（作者自定义 = 标题）
     var rtDesc      = document.getElementById('rt-desc');     // 这卷的一句解释（可选）
-    var rtMeta      = document.getElementById('rt-meta');     // 相机 · 镜头 = 参数
+    var rtMeta      = document.getElementById('rt-meta');     // 型号·相机·镜头·日期 = 参数
     var pageNote    = document.getElementById('page-note');   // 每格自己的一句话（可选）
     var pageFolio   = document.getElementById('page-folio');
     var viewEnd     = document.getElementById('view-end');
@@ -779,13 +780,12 @@
       edgeStock.textContent = currentRoll.stock;
       edgeFrame.textContent = (currentIndex + 1) + (currentRoll.format === '120' ? '' : 'A');
       pageFolio.textContent = (currentIndex + 1) + ' / ' + photos.length;
-      // 右侧说明面板（与 series lightbox 同构）：型号=标题、相机·镜头=参数、
-      // desc=这卷的一句解释；胶片一卷器材固定，所以整卷共用一套、每格只换 note。
-      // 空字段靠 CSS :empty 自动隐藏。
-      rtStock.textContent = currentRoll.stock || '';
-      rtDate.textContent  = currentRoll.date  || '';
+      // 右侧说明面板（与 series lightbox 同构）：作品名=标题、desc=解释、
+      // 参数行=型号·相机·镜头·日期（全是固定技术信息，成组放底部）。
+      // 胶片一卷器材固定，所以整卷共用一套、每格只换 note。空字段靠 :empty 隐藏。
+      rtTitle.textContent = currentRoll.title || '';
       rtDesc.textContent  = currentRoll.desc  || '';
-      rtMeta.textContent  = [currentRoll.camera, currentRoll.lens]
+      rtMeta.textContent  = [currentRoll.stock, currentRoll.camera, currentRoll.lens, currentRoll.date]
         .filter(function (s) { return s; }).join(' · ');
       pageNote.textContent = p.note || '';           // 每格自己的一句话
     }
