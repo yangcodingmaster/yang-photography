@@ -342,7 +342,12 @@
       max-width: 100%;                    /* 跟随片框区宽度（与 series lightbox 的 max-w-full 一致）*/
       max-height: calc(100vh - 12rem);    /* 页脚移走了，可以比原来高一些 */
       object-fit: contain;
+      /* 只对 filter 做过渡：opacity/transform 归 fluid.js 逐帧写，加了过渡会打架 */
+      transition: filter 0.25s ease;
     }
+    /* 照片"在路上"：新照片没到之前把旧画面压暗（诚实反馈，不装作已翻格）。
+       由 fluid.js 的 fluidLoadingGuard 挂/摘，图片到达自动恢复 */
+    #film-frame img.photo-loading { filter: brightness(0.55); }
 
     /* 竖片：片边字横贯顶部，齿孔改站左右两侧 */
     #film-frame.portrait {
@@ -885,6 +890,7 @@
       filmFrame.classList.toggle('f120', currentRoll.format === '120');
       pageImg.src = p.src;
       pageImg.alt = p.alt || (currentRoll.stock + ' 第 ' + (currentIndex + 1) + ' 格');
+      imgGuard.mark();   // 照片还在路上就压暗提示；到了自动恢复并预加载相邻格
       // 片边字：型号在左，画格编号在右（135 带 A —— 真实底片的画格编号写法）
       edgeStock.textContent = currentRoll.stock;
       edgeFrame.textContent = (currentIndex + 1) + (currentRoll.format === '120' ? '' : 'A');
@@ -898,6 +904,17 @@
         .filter(function (s) { return s; }).join(' · ');
       pageNote.textContent = p.note || '';           // 每格自己的一句话
     }
+
+    // ── 照片加载：预加载相邻格 + "在路上"压暗反馈（与 archive 同构）──
+    // 当前照片一到就悄悄预热下一格/上一格，不跟当前照片抢带宽
+    function preloadNeighbors() {
+      var photos = currentRoll ? currentRoll.photos : [];
+      fluidPreload([
+        (photos[currentIndex + 1] || {}).src,
+        (photos[currentIndex - 1] || {}).src,
+      ]);
+    }
+    var imgGuard = fluidLoadingGuard(pageImg, preloadNeighbors);
 
     // ── 手势 + 翻页动画：全部交给 fluid.js 的滑动控制器 ──────────
     // 与 series / archive 完全一致：1:1 跟手、橡皮筋、惯性决策；

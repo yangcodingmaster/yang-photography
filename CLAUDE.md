@@ -686,6 +686,12 @@ rsync 增量同步到腾讯云，**只传变化的部分** —— 改几行文�
 - **`createSwipeControl(rootEl, hooks)`** — 手势控制器：10px 迟滞 + 方向锁定（竖向让给原生滚动）、
   1:1 跟手、松手决策、两段式换图动画（滑出渐隐 → swap → 反向滑入渐显）、拖拽后吞 click 防误触
 - **手感参数**都在 `createSwipeControl` 顶部（HYSTERESIS/COMMIT_DIST/OUT_DIST/IN_DIST/FLICK_CLOSE），改前三思
+- **`fluidPreload(srcs)` / `fluidLoadingGuard(img, onReady)`** — 照片加载辅助（三个阅读视图共用）：
+  照片平均 1.16MB、服务器出口约 400KB/s，翻页后新照片要几秒才到，而浏览器在新图到达前
+  会一直显示旧图不吭声（2026-07 真机报的"永远停在第一张"就是这个，翻页逻辑本身没坏）。
+  守卫在图没到时给 img 加 `.photo-loading`（压暗，**用 filter 不用 opacity**——opacity 归
+  滑动控制器的动画管）；图到了自动恢复并回调 onReady，页面用它**接着**预加载相邻照片
+  （等当前图到了再预热邻图，不抢带宽）。顺着翻 = 邻图总已在缓存里
 - **`fluidReveal(el)`** — 滚动浮现：元素第一次进入视野且图片解码完成后，从下方 14px 轻轻浮上来（450ms 无回弹）。
   gallery 卡片 / series 网格项 / archive 书架的书脊都在创建元素时调用它；同批进入视野的按屏幕位置错开 50ms；
   每张只浮现一次；切换 Archive 年份重新渲染 = 重新浮现（有意的）

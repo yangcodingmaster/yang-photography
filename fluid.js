@@ -148,6 +148,48 @@ function revealWhenReady(el, delay) {
 }
 
 
+// ── 照片加载辅助（series / archive / film 三个阅读视图共用）──────────
+//
+// 为什么需要：照片平均 1.16MB，服务器出口约 400KB/s——翻页后新照片要
+// 好几秒才到，而浏览器在新图到达之前会一直显示旧图，且不给任何提示。
+// 看起来就是"翻不动、永远停在第一张"（2026-07 作者真机报的最严重 bug，
+// 排查结论：翻页逻辑完好，是照片在路上 + 界面不吭声）。
+//
+// 两手准备：
+//   fluidPreload(srcs)          —— 预加载一组图片（浏览器缓存热身）
+//   fluidLoadingGuard(img, cb)  —— 给阅读视图的主图挂一次；换 src 后调 mark()，
+//                                  图没到就压暗（.photo-loading），到了自动恢复
+//                                  并回调 cb（页面用它接着预加载相邻照片——
+//                                  等当前图到了再预热邻图，不跟它抢带宽）
+
+// 预加载：让浏览器把这些图悄悄拉进缓存（重复调用无害，缓存直接命中）
+function fluidPreload(srcs) {
+  (srcs || []).forEach(function (src) {
+    if (src) { (new Image()).src = src; }
+  });
+}
+
+// 加载状态守卫：img 元素挂一次，返回 { mark }
+// ⚠️ 压暗用的是 filter（.photo-loading 类），不是 opacity——
+//    opacity 归上面滑动控制器的翻页动画管，两边写同一个属性会打架
+function fluidLoadingGuard(img, onReady) {
+  function done() {
+    img.classList.remove('photo-loading');
+    if (onReady) onReady();
+  }
+  img.addEventListener('load', done);
+  img.addEventListener('error', done);   // 加载失败也别永远压暗着
+  return {
+    // 每次给 img 换完 src 后调用：已在缓存里就直接触发 onReady，否则压暗等它
+    mark: function () {
+      var loaded = img.complete;
+      img.classList.toggle('photo-loading', !loaded);
+      if (loaded) { if (onReady) onReady(); }
+    },
+  };
+}
+
+
 // ── 滑动控制器：接管一个 Lightbox 的所有横向手势 + 翻页动画 ────────
 // 页面只需要提供 hooks（钩子），引擎不关心页面的数据结构：
 //   isActive()   → Lightbox 当前是否打开

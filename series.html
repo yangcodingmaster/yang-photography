@@ -81,11 +81,16 @@
     }
     #lightbox-img {
       transform: scale(0.97);
-      transition: transform 0.25s ease;
+      /* filter 是照片"在路上"的压暗态用的（见下）；跟开场缩放写在同一条过渡里。
+         这里不过渡 opacity —— 那个归 fluid.js 逐帧写，加了过渡会打架 */
+      transition: transform 0.25s ease, filter 0.25s ease;
     }
     #lightbox.active #lightbox-img {
       transform: scale(1);
     }
+    /* 照片"在路上"：新照片没到之前把旧画面压暗（诚实反馈，不装作已翻页）。
+       由 fluid.js 的 fluidLoadingGuard 挂/摘，图片到达自动恢复 */
+    #lightbox-img.photo-loading { filter: brightness(0.55); }
     /* 可拖拽区域：抓手光标提示"这是能推动的实物" */
     #view-photo, #view-group, #view-chapter, #view-end {
       cursor: grab;
@@ -448,6 +453,7 @@
         viewPhoto.style.display = '';
         document.getElementById('lightbox-img').src = item.photo.src;
         document.getElementById('lightbox-img').alt = item.photo.alt;
+        imgGuard.mark();   // 照片还在路上就压暗提示；到了自动恢复并预加载相邻条目
         // 显示计数和当前章节英文名（如果在分章系列里）
         counterEl.textContent = getCounter();
         chapterEl.textContent = item.chapterEn ? '· ' + item.chapterEn : '';
@@ -489,6 +495,10 @@
         setField('chapter-desc-zh', item.descZh);
         setField('chapter-desc-en', item.descEn);
       }
+
+      // 组图/章节卡不走主图的加载守卫（守卫只挂在单张照片的 img 上），
+      // 在这里直接预热相邻条目；照片页则等自己加载完再预热（见 fluidLoadingGuard）
+      if (item.kind !== 'photo') preloadNeighbors();
     }
 
     function setField(id, text) {
@@ -496,6 +506,24 @@
       if (!el) return;
       el.textContent = text || ''; el.style.display = text ? '' : 'none';
     }
+
+    // ── 照片加载：预加载相邻条目 + "在路上"压暗反馈 ──────────────
+    // 照片平均 1.16MB、服务器出口约 400KB/s，翻页后新照片要几秒才到。
+    // 对策：当前照片一到就悄悄预热相邻条目的图（等它到了再预热，
+    // 不跟当前照片抢带宽）——顺着翻的时候照片总是已经在缓存里了
+
+    // 一个条目要预热哪些图：照片 = 1 张；组图 = 整组；章节卡/结束卡 = 没有图
+    function itemSrcs(item) {
+      if (!item) return [];
+      if (item.kind === 'photo') return [item.photo.src];
+      if (item.kind === 'group') return item.photos.map(function (p) { return p.src; });
+      return [];
+    }
+    function preloadNeighbors() {
+      fluidPreload(itemSrcs(renderItems[currentIndex + 1])
+           .concat(itemSrcs(renderItems[currentIndex - 1])));
+    }
+    var imgGuard = fluidLoadingGuard(document.getElementById('lightbox-img'), preloadNeighbors);
 
     // ── 手势 + 翻页动画：全部交给 fluid.js 的滑动控制器 ──────────
     // 一个控制器挂在 #lightbox 上，覆盖照片/组图/章节卡/结束卡四种视图：

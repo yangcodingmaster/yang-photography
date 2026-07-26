@@ -223,7 +223,12 @@
       object-fit: contain;
       /* 抓手光标提示"这是能推动的实物"（触摸和鼠标拖拽都由 fluid.js 接管） */
       cursor: grab;
+      /* 只对 filter 做过渡：opacity/transform 归 fluid.js 逐帧写，加了过渡会打架 */
+      transition: filter 0.25s ease;
     }
+    /* 照片"在路上"：新照片没到之前把旧画面压暗（诚实反馈，不装作已翻页）。
+       由 fluid.js 的 fluidLoadingGuard 挂/摘，图片到达自动恢复 */
+    .page-photo img.photo-loading { filter: brightness(0.55); }
 
     /* 页脚区：定高贴底。页码贴底边（位置恒定），note 在其上方浮现/消失 */
     .page-footer {
@@ -543,10 +548,23 @@
       photoArea.style.display = '';
       pageImg.src = p.src;
       pageImg.alt = p.alt || (currentYear + ' 散片');
+      imgGuard.mark();   // 照片还在路上就压暗提示；到了自动恢复并预加载相邻页
       pageNote.textContent  = p.note || '';
       pageFolio.textContent = (currentIndex + 1) + ' / ' + currentPhotos.length;
       readerTitle.textContent = currentYear;
     }
+
+    // ── 照片加载：预加载相邻页 + "在路上"压暗反馈 ────────────────
+    // 照片平均 1.16MB、服务器出口约 400KB/s，翻页后新照片要几秒才到。
+    // 对策：当前照片一到就悄悄预热下一张/上一张（等它到了再预热，
+    // 不跟当前照片抢带宽）——顺着翻的时候照片总是已经在缓存里了
+    function preloadNeighbors() {
+      fluidPreload([
+        (currentPhotos[currentIndex + 1] || {}).src,
+        (currentPhotos[currentIndex - 1] || {}).src,
+      ]);
+    }
+    var imgGuard = fluidLoadingGuard(pageImg, preloadNeighbors);
 
     // ── 手势 + 翻页动画：全部交给 fluid.js 的滑动控制器 ──────────
     // 1:1 跟手拖拽（触摸和鼠标都行）、松手按速度决定翻页或弹回、
