@@ -570,7 +570,46 @@
       }).join('');
     }
 
-    rows.forEach(function (row) {
+    // ══ 手机上每排最多放 2 卷 ══════════════════════════════════════
+    //
+    // 为什么必须限制：一卷"展开"要占的宽度 = 筒宽 + 片头长。
+    // 135 在桌面是 84 + 220 = 304px，而 iPhone 屏幕只有 375px —— 一卷就吃掉 81%。
+    // 结果是只有左缘 ≤71px 的筒才装得下完整片头，一排放 4 卷就注定 3 卷看不全
+    // （实测：第 4 卷的片头有 219px 在屏幕外，点下去几乎什么都看不到）。
+    //
+    // 每排 2 卷 + 片头缩到 160 之后：
+    //   第 1 卷 左缘 24  → 24 + 84 + 160 = 268px   ✓
+    //   第 2 卷 左缘 122 → 122 + 84 + 160 = 366px  ✓（余 9px）
+    // 3 卷不行：第 3 卷左缘就到 220px 了，右边只剩 71px。
+    //
+    // 桌面完全不受影响：一排照旧不限卷数、片头照旧 220px。
+    // 120 的片头 108px 本来就放得下，不用缩。
+
+    var NARROW_MAX = 640;   // 与 Tailwind 的 sm 断点一致
+
+    function isNarrow()    { return window.innerWidth < NARROW_MAX; }
+    function rollsPerRow() { return isNarrow() ? 2 : Infinity; }
+
+    // 片头抽出长度：手机上把 135 从 220 缩到 160，其余照常
+    function leaderLen(format, dims) {
+      if (!isNarrow() || format === '120') return dims.lw;
+      return 160;
+    }
+
+    // 把"每个型号一组"切成"每排最多 N 卷"。
+    // 同型号超出的部分自动另起一排搁板，读起来仍是从左到右、从上到下的时间线。
+    function chunkRows(groups) {
+      var per = rollsPerRow();
+      var out = [];
+      groups.forEach(function (g) {
+        for (var i = 0; i < g.rolls.length; i += per) {
+          out.push({ stock: g.stock, rolls: g.rolls.slice(i, i + per) });
+        }
+      });
+      return out;
+    }
+
+    function buildRow(row) {
       var rowEl = document.createElement('div');
       rowEl.className = 'film-row border-b border-site-border';
 
@@ -591,7 +630,7 @@
         bay.style.setProperty('--cw', dims.cw);
         bay.style.setProperty('--bh', dims.bh);
         bay.style.setProperty('--sh', dims.sh);
-        bay.style.setProperty('--lw', dims.lw);   // 片头抽出长度（135 长条 / 120 近方）
+        bay.style.setProperty('--lw', leaderLen(roll.format, dims));   // 片头抽出长度（手机上 135 缩短，见 leaderLen）
 
         // 筒身：135 = 片轴头 + 竖排型号；120 = 纸封卷 + 型号横贴腰带（印字 = label 字段）
         // 两套皮肤（几何完全相同，只换颜色）：
@@ -684,6 +723,27 @@
       });
 
       cabinet.appendChild(rowEl);
+    }
+
+    // 整个柜子重建一次。跨断点（手机 ↔ 桌面）时每排的卷数和片头长度都变了，
+    // 只能重建，没法靠 CSS 完成——搁板线是每排一条，换行必须真的多出一个 .film-row。
+    function renderCabinet() {
+      clearPreview();            // 旧的 DOM 要被丢掉，先清掉指向它的状态
+      cabinet.innerHTML = '';
+      chunkRows(rows).forEach(buildRow);
+    }
+
+    renderCabinet();
+
+    // 只在真正跨过断点时才重建（普通的尺寸变化、手机地址栏收放都不重建，
+    // 否则筒会反复重新浮现，很吵）。阅读视图开着时不动，等关掉再说。
+    var wasNarrow = isNarrow();
+    window.addEventListener('resize', function () {
+      var now = isNarrow();
+      if (now === wasNarrow) return;
+      wasNarrow = now;
+      if (reader.classList.contains('open')) return;
+      renderCabinet();
     });
 
     // ══ 触屏两步交互：先抽片头，再点胶片翻开 ══════════════════════

@@ -84,19 +84,38 @@
        film.html 那边是真发病了，同一个原因。 */
     html, body { overflow-x: hidden; }
 
-    /* ── 书架：一排书站在一条极简搁板线上 ── */
+    /* ── 书架：一排排搁板，每排若干本书 ──────────────────────────
+       手机上一排放不下所有年份（展开一本要 240px，屏幕只有 375px），
+       所以按视口切成若干排，每排一条搁板线。桌面仍是一排放完。 */
     #shelf {
       display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      gap: 8px;
-      padding-bottom: 14px;
-      /* transform：触屏两步交互里"把选中的书推到屏幕中心"用（JS 计算位移量） */
-      transition: opacity 0.4s ease,
-                  transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      flex-direction: column;
+      width: 100%;              /* 撑满，好让各排有共同的左缘 */
+      gap: 2.5rem;              /* 排与排之间的间距 */
+      transition: opacity 0.4s ease;
     }
-    /* 打开某本书时，其余的书淡出并收拢宽度——
-       被翻开的书自动居中，窄屏上书架也不会瞬间超出屏幕 */
+
+    /* 一排 = 站在一条搁板线上的一列书 */
+    .shelf-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;  /* 桌面保持居中（原来的观感，屏幕够宽不会出问题） */
+      gap: 8px;
+      padding-bottom: 10px;     /* 书底与搁板线之间留一点缝，别焊在一起 */
+      transition: opacity 0.4s ease;
+    }
+    /* ⚠️ 手机上必须左对齐。居中的话某本书展宽时整排会向两侧同时撑开，
+       视觉上像"从中间被掰开"——Film 页踩过这个坑，作者明确否掉了。
+       左对齐时展宽只往右推后面的书，前面的书纹丝不动，物理才说得通。 */
+    @media (max-width: 639px) {
+      .shelf-row { justify-content: flex-start; }
+    }
+
+    /* 打开某本书时：其余的书淡出收拢，其余的排整排淡出 */
+    #shelf.opening .shelf-row:not(.has-active) {
+      opacity: 0;
+      pointer-events: none;
+    }
     #shelf.opening .slot:not(.active) {
       opacity: 0;
       width: 0;
@@ -118,9 +137,14 @@
                   transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
                   opacity 0.4s ease;
     }
-    /* hover 展宽只给有光标的设备；触屏走两步交互（.preview 居中预览 → 再点翻开） */
+    /* hover 展宽只给有光标的设备；触屏走两步交互（.preview 展开 → 再点封面翻开） */
     @media (hover: hover) { .slot:hover { width: 250px; } }
     .slot.active, .slot.preview { width: 250px; }
+    /* 手机上收窄一点：一排 2 本时，最厚的书脊 70px + 间隙 8px + 展开 240px = 318px，
+       在 327px 的可用宽度里刚好放得下（250px 会差 1px） */
+    @media (max-width: 639px) {
+      .slot.active, .slot.preview { width: 240px; }
+    }
     /* 极轻的按压态（与 gallery 卡片同款）——有意加的即时反馈，不要"修复"掉 */
     .slot:active { transform: scale(0.99); }
 
@@ -273,7 +297,8 @@
 
   <!-- 书架：每年一本书，由 JS 根据 allArchive 生成 -->
   <main class="flex-1 flex items-center justify-center px-6 pb-16">
-    <div id="shelf" class="border-b border-site-border"></div>
+    <!-- 搁板线画在每一排上（.shelf-row），不在这里——手机上会有多排 -->
+    <div id="shelf"></div>
   </main>
 
 
@@ -325,7 +350,27 @@
 
     var shelf = document.getElementById('shelf');
 
-    years.forEach(function (year) {
+    // ══ 手机上每排最多放 2 本 ══════════════════════════════════════
+    //
+    // 展开一本书要 240px，手机可用宽度只有 327px。一排放 5 本的话，
+    // 展开任意一本都会让整排到 488–524px，超出 160–200px 被裁掉看不见。
+    // 每排 2 本：最厚的书脊 70 + 间隙 8 + 展开 240 = 318px，放得下。
+    // 桌面屏幕够宽，仍然一排放完，观感不变。
+
+    var NARROW_MAX = 640;   // 与 Tailwind 的 sm 断点一致
+
+    function isNarrow()    { return window.innerWidth < NARROW_MAX; }
+    function booksPerRow() { return isNarrow() ? 2 : Infinity; }
+
+    // 把年份切成一排排；读起来仍是从左到右、从上到下的时间线
+    function chunkYears() {
+      var per = booksPerRow();
+      var out = [];
+      for (var i = 0; i < years.length; i += per) out.push(years.slice(i, i + per));
+      return out;
+    }
+
+    function buildBook(year, rowEl) {
       var photos = allArchive[year];
       // 书脊宽度：底宽 16px + 每张照片 1.6px（数据即造型：一眼看出哪年拍得多）
       var thickness = Math.round(16 + photos.length * 1.6);
@@ -345,7 +390,7 @@
           '<div class="text-xs tracking-widest text-site-muted mt-1">' + photos.length + ' PHOTOS</div>' +
         '</div>';
 
-      // 点击：桌面（有光标）直接翻开；触屏走两步——先居中预览，再点封面才翻开
+      // 点击：桌面（有光标）直接翻开；触屏走两步——先展开预览，再点封面才翻开
       slot.addEventListener('click', function () {
         if (isTouchMode() && previewSlot !== slot) {
           previewBook(slot);
@@ -355,7 +400,32 @@
       });
 
       fluidReveal(slot);   // 滚动浮现：书架第一次进入视野时轻轻浮上来（自左而右错开）
-      shelf.appendChild(slot);
+      rowEl.appendChild(slot);
+    }
+
+    // 整个书架重建一次。跨断点（手机 ↔ 桌面）时每排放几本变了，只能重建——
+    // 搁板线是每排一条，换行必须真的多出一个 .shelf-row。
+    function renderShelf() {
+      clearPreview();            // 旧 DOM 要被丢掉，先清掉指向它的状态
+      shelf.innerHTML = '';
+      chunkYears().forEach(function (group) {
+        var rowEl = document.createElement('div');
+        rowEl.className = 'shelf-row border-b border-site-border';
+        group.forEach(function (year) { buildBook(year, rowEl); });
+        shelf.appendChild(rowEl);
+      });
+    }
+
+    renderShelf();
+
+    // 只在真正跨过断点时才重建（普通尺寸变化、手机地址栏收放都不重建）
+    var wasNarrow = isNarrow();
+    window.addEventListener('resize', function () {
+      var now = isNarrow();
+      if (now === wasNarrow) return;
+      wasNarrow = now;
+      if (reader.classList.contains('open')) return;
+      renderShelf();
     });
 
     // ══ 触屏两步交互：先居中预览，再点封面翻开 ══════════════════
@@ -371,38 +441,23 @@
       return !window.matchMedia('(hover: hover)').matches;
     }
 
-    // 把某本书居中展开预览
+    // 原地展开预览
+    //
+    // ⚠️ 这里不做"把这本书推到屏幕中心"的整架平移。早先版本做过，是坏的：
+    // 书向右展宽、书架却向左平移，两个动作方向相反，被选中的书因为互相
+    // 抵消而看起来原地不动，两侧的书各自朝反方向退开，视觉上像"从中间被
+    // 掰开"。Film 页先踩的这个坑，作者明确否掉了。现在靠"每排 2 本"保证
+    // 展开后放得下，不需要任何位移。别再加回来。
     function previewBook(slot) {
       if (previewSlot) previewSlot.classList.remove('preview');
       previewSlot = slot;
       slot.classList.add('preview');
-      centerShelfOn(slot);
     }
 
-    // 计算书架需要平移多少，才能让这本书（按展开后的目标宽度）的中心对准屏幕中心
-    // 按目标布局直接算，不等动画走完——位移和展宽走同一条缓动曲线，同时到位
-    function centerShelfOn(slot) {
-      var slots = Array.prototype.slice.call(shelf.children);
-      var gap = 8;
-      // 每本书的目标宽度：被选中的 = 250，其余 = 各自书脊厚度
-      var widths = slots.map(function (s) {
-        return (s === slot) ? 250 : parseFloat(s.style.getPropertyValue('--t'));
-      });
-      var total = widths.reduce(function (a, b) { return a + b; }, 0) + gap * (slots.length - 1);
-      var idx = slots.indexOf(slot);
-      var before = 0;
-      for (var i = 0; i < idx; i++) before += widths[i] + gap;
-      // 书架 flex 居中：左缘 = (视口宽 - 总宽) / 2；再平移把书心推到屏心
-      var slotCenter = (window.innerWidth - total) / 2 + before + widths[idx] / 2;
-      var delta = window.innerWidth / 2 - slotCenter;
-      shelf.style.transform = 'translateX(' + delta + 'px)';
-    }
-
-    // 收回预览：书架归位，书缩回书脊态
+    // 收回预览：书缩回书脊态
     function clearPreview() {
       if (previewSlot) previewSlot.classList.remove('preview');
       previewSlot = null;
-      shelf.style.transform = '';
     }
 
     // 点书架以外的空白处 = 收回预览（阅读视图打开时不管）
@@ -435,9 +490,10 @@
       currentPhotos = (allArchive[year] || []).slice();
       currentIndex  = 0;
       activeSlot    = slot;
-      // 若正处于触屏预览态：交还给 flex 居中（其余书收拢后，翻开的书自然居中）
       clearPreview();
       shelf.classList.add('opening');
+      // 标记这本书所在的那一排：其余排整排淡出（手机上有多排时才看得到区别）
+      if (slot.parentElement) slot.parentElement.classList.add('has-active');
       slot.classList.add('active');
       setTimeout(function () {
         swipeControl.reset();   // 清掉上一次遗留的位移/透明度
@@ -452,7 +508,10 @@
       swipeControl.reset();     // 中途关闭也要清场，下次打开才干净
       reader.classList.remove('open');
       shelf.classList.remove('opening');
-      if (activeSlot) activeSlot.classList.remove('active');
+      if (activeSlot) {
+        activeSlot.classList.remove('active');
+        if (activeSlot.parentElement) activeSlot.parentElement.classList.remove('has-active');
+      }
       activeSlot = null;
       clearPreview();
       document.body.style.overflow = '';
