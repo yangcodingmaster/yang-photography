@@ -79,6 +79,24 @@
        裁切必须发生在视口这一层，不能在排这一层。 */
     html, body { overflow-x: hidden; }
 
+    /* ── 两拍动画的时长（触屏用）────────────────────────────────
+       触屏点开一卷时有两个动作：整排滑动（把这卷送到阅读位）和
+       片头抽出。原来它们同时发生，结果是——被选中的筒因为两者
+       互相抵消而看起来"原地不动"，两侧的邻筒却朝相反方向退开，
+       视觉上像"从中间被掰开"而不是"抽出一条胶片"。
+       （实测：点第 2 个筒时前面的筒往左 72px、后面的往右 148px。
+       第一个和最后一个筒因为只有一侧邻居，反而是连贯的。）
+
+       解法是把两个动作排成先后：先滑动，再抽片头。每一拍都只有
+       一个因果，就不再割裂。JS 里的 SLIDE_LEAD 控制第二拍何时开始。
+
+       ⚠️ 桌面保持 0.55s 不变：那边只有 hover 抽片头、没有整排滑动，
+       本来就不存在这个问题，没必要跟着改手感。 */
+    :root { --pull-dur: 0.55s; --slide-dur: 0.55s; }
+    @media (hover: none) {
+      :root { --pull-dur: 0.38s; --slide-dur: 0.32s; }
+    }
+
     /* ── 柜子：一排排搁板，每排一个型号 ── */
     #cabinet {
       display: flex;
@@ -102,7 +120,8 @@
          "从筒底往下多少"定位的，线一动、两者的间距就变了。
          关系：日期到线的距离 = .bay-date 的 padding-top − 这里的 padding-bottom */
       padding-bottom: 8px;
-      transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      /* 第一拍：整排滑动（时长见上面的 --slide-dur） */
+      transition: transform var(--slide-dur) cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     /* ── 仓位（bay）：一卷占的位置 = 筒 + 脚下的小日期 ──
@@ -112,7 +131,8 @@
       width: calc(var(--w) * 1px);
       flex-shrink: 0;
       cursor: pointer;
-      transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+      /* 第二拍：筒展宽（片头被抽出来的过程），时长见上面的 --pull-dur */
+      transition: width var(--pull-dur) cubic-bezier(0.22, 1, 0.36, 1),
                   opacity 0.4s ease;
     }
     /* hover 抽片头只给有光标的设备；触屏走两步交互（.preview 居中 → 再点翻开） */
@@ -228,7 +248,8 @@
       display: flex;
       flex-direction: column;
       transform: translateX(calc(var(--lw) * -1px));   /* 收起：整条藏进筒后 */
-      transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      /* 第二拍：片头滑出（与筒展宽同一条曲线、同一个时长，保持同步） */
+      transition: transform var(--pull-dur) cubic-bezier(0.22, 1, 0.36, 1);
     }
     @media (hover: hover) { .bay:hover .leader { transform: translateX(0); } }
     .bay.preview .leader, .bay.active .leader { transform: translateX(0); }
@@ -672,7 +693,7 @@
           if (e.target.closest('.leader')) {
             openRoll(roll, bay, rowEl);
           } else {
-            clearPreview();
+            clearPreview(true);   // true = 分两拍收回（片头先缩，整排再滑回）
           }
         });
 
@@ -691,18 +712,35 @@
     var previewSlot = null;   // 当前居中预览的筒
     var previewCans = null;   // 它所在的 .row-cans（收回时归位）
 
+    // 两拍之间的间隔：第一拍（整排滑动 0.32s）走到约六成时，第二拍（抽片头）开始。
+    // 不等第一拍完全停住是有意的——完全停住再动会显得一顿一顿，
+    // 略微搭接读起来仍有先后，但是连贯的一个动作。总时长约 0.2 + 0.38 = 0.58s。
+    var SLIDE_LEAD   = 200;
+    var seqTimer     = null;  // 第二拍：抽片头
+    var retractTimer = null;  // 收回时的第二拍：整排滑回原位
+
     // 每次点击时现查设备是否无光标（触屏），不在加载时缓存
     function isTouchMode() {
       return !window.matchMedia('(hover: hover)').matches;
     }
 
-    // 把某个筒居中并抽出片头
+    // 把某个筒居中并抽出片头 —— 分两拍：先滑动整排，再抽片头
     function previewRoll(slot, cans) {
       clearPreview();
       previewSlot = slot;
       previewCans = cans;
-      slot.classList.add('preview');
-      centerCansOn(slot, cans);
+
+      centerCansOn(slot, cans);          // 第一拍：整排滑动
+
+      // 系统开了"减弱动态效果"就不排队了，直接到位（否则等待期会像卡住）
+      if (typeof fluidReducedMotion === 'function' && fluidReducedMotion()) {
+        slot.classList.add('preview');
+        return;
+      }
+      seqTimer = setTimeout(function () {   // 第二拍：抽片头
+        slot.classList.add('preview');
+        seqTimer = null;
+      }, SLIDE_LEAD);
     }
 
     // 计算这排的筒需要平移多少，才能让这个筒（按展开后的目标宽度）的中心对准屏幕中心
@@ -733,12 +771,40 @@
       return m ? parseFloat(m[1]) : 0;
     }
 
-    // 收回预览：筒缩回，整排归位
-    function clearPreview() {
-      if (previewSlot) previewSlot.classList.remove('preview');
-      if (previewCans) previewCans.style.transform = '';
+    /**
+     * 收回预览。
+     *
+     * sequenced = true  —— 用户主动收回（点胶卷盒、点空白处）：也分两拍，
+     *                      顺序反过来，片头先缩回盒里，再让整排滑回原位。
+     *                      不这么做的话，收回时会重演"两侧反向"的割裂感。
+     * sequenced = 不传  —— 立即归位。用在两种场合：
+     *                      ① 打开阅读视图（整排不该在阅读视图升起时还慢慢滑）
+     *                      ② 切换到另一卷（紧接着的 centerCansOn 会覆盖它）
+     */
+    function clearPreview(sequenced) {
+      cancelSeq();
+      if (previewSlot) previewSlot.classList.remove('preview');   // 片头先收
+      var cans = previewCans;
       previewSlot = null;
       previewCans = null;
+      if (!cans) return;
+
+      var reduced = typeof fluidReducedMotion === 'function' && fluidReducedMotion();
+      if (!sequenced || reduced) {
+        cans.style.transform = '';
+        return;
+      }
+      retractTimer = setTimeout(function () {   // 第二拍：整排滑回原位
+        cans.style.transform = '';
+        retractTimer = null;
+      }, SLIDE_LEAD);
+    }
+
+    // 取消还没执行的那一拍（切换胶卷或收回时必须先取消，否则旧的定时器
+    // 会在新动作已经开始之后才触发，把整排的位移抹掉）
+    function cancelSeq() {
+      if (seqTimer)     { clearTimeout(seqTimer);     seqTimer = null; }
+      if (retractTimer) { clearTimeout(retractTimer); retractTimer = null; }
     }
 
     // 点柜子以外的空白处 = 收回预览（阅读视图打开时不管）
@@ -746,7 +812,7 @@
       if (!previewSlot) return;
       if (reader.classList.contains('open')) return;
       if (e.target.closest && e.target.closest('.bay')) return;
-      clearPreview();
+      clearPreview(true);   // true = 分两拍收回
     });
 
     // ══ 第二部分：阅读视图 ══════════════════════════════════════
