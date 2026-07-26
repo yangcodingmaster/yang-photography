@@ -79,24 +79,6 @@
        裁切必须发生在视口这一层，不能在排这一层。 */
     html, body { overflow-x: hidden; }
 
-    /* ── 两拍动画的时长（触屏用）────────────────────────────────
-       触屏点开一卷时有两个动作：整排滑动（把这卷送到阅读位）和
-       片头抽出。原来它们同时发生，结果是——被选中的筒因为两者
-       互相抵消而看起来"原地不动"，两侧的邻筒却朝相反方向退开，
-       视觉上像"从中间被掰开"而不是"抽出一条胶片"。
-       （实测：点第 2 个筒时前面的筒往左 72px、后面的往右 148px。
-       第一个和最后一个筒因为只有一侧邻居，反而是连贯的。）
-
-       解法是把两个动作排成先后：先滑动，再抽片头。每一拍都只有
-       一个因果，就不再割裂。JS 里的 SLIDE_LEAD 控制第二拍何时开始。
-
-       ⚠️ 桌面保持 0.55s 不变：那边只有 hover 抽片头、没有整排滑动，
-       本来就不存在这个问题，没必要跟着改手感。 */
-    :root { --pull-dur: 0.55s; --slide-dur: 0.55s; }
-    @media (hover: none) {
-      :root { --pull-dur: 0.38s; --slide-dur: 0.32s; }
-    }
-
     /* ── 柜子：一排排搁板，每排一个型号 ── */
     #cabinet {
       display: flex;
@@ -120,8 +102,8 @@
          "从筒底往下多少"定位的，线一动、两者的间距就变了。
          关系：日期到线的距离 = .bay-date 的 padding-top − 这里的 padding-bottom */
       padding-bottom: 8px;
-      /* 第一拍：整排滑动（时长见上面的 --slide-dur） */
-      transition: transform var(--slide-dur) cubic-bezier(0.22, 1, 0.36, 1);
+      /* 这里没有 transform 过渡是有意的：整排永远不平移。
+         筒钉在原地，只有片头往右伸——理由见下方 .bay 的注释 */
     }
 
     /* ── 仓位（bay）：一卷占的位置 = 筒 + 脚下的小日期 ──
@@ -131,8 +113,9 @@
       width: calc(var(--w) * 1px);
       flex-shrink: 0;
       cursor: pointer;
-      /* 第二拍：筒展宽（片头被抽出来的过程），时长见上面的 --pull-dur */
-      transition: width var(--pull-dur) cubic-bezier(0.22, 1, 0.36, 1),
+      /* 筒展宽 = 片头被抽出来的过程。桌面和触屏用同一个时长、同一条曲线：
+         两边现在是完全一样的物理——筒不动，片头往右伸，把后面的筒挤开。 */
+      transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1),
                   opacity 0.4s ease;
     }
     /* hover 抽片头只给有光标的设备；触屏走两步交互（.preview 居中 → 再点翻开） */
@@ -248,8 +231,8 @@
       display: flex;
       flex-direction: column;
       transform: translateX(calc(var(--lw) * -1px));   /* 收起：整条藏进筒后 */
-      /* 第二拍：片头滑出（与筒展宽同一条曲线、同一个时长，保持同步） */
-      transition: transform var(--pull-dur) cubic-bezier(0.22, 1, 0.36, 1);
+      /* 与筒展宽同一条曲线、同一个时长，两者必须同步 */
+      transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
     }
     @media (hover: hover) { .bay:hover .leader { transform: translateX(0); } }
     .bay.preview .leader, .bay.active .leader { transform: translateX(0); }
@@ -530,7 +513,6 @@
       '135': { cw: 68, bh: 100, h: 112, sh: 88,  w: 68 + TONGUE_W, lw: 220 },
       '120': { cw: 70, bh: 122, h: 122, sh: 108, w: 70,            lw: 108 },
     };
-    var LEADER_W = 220;   // 兜底值：dims 里没给 lw 时用（正常都从 --lw 读）
 
     // ── 真实胶片壳配色开关（作者已采纳）─────────────────────────
     // true  = 筒身穿各型号真实品牌配色（黑壳黄条的柯达 Professional 系 / 金黄 Gold / 富士绿 Superia）
@@ -686,14 +668,14 @@
             return;
           }
           if (previewSlot !== bay) {
-            previewRoll(bay, cans);
+            previewRoll(bay);
             return;
           }
           // 片头已抽出：点胶片进全屏，点别的地方（盒子、脚下日期）收回
           if (e.target.closest('.leader')) {
             openRoll(roll, bay, rowEl);
           } else {
-            clearPreview(true);   // true = 分两拍收回（片头先缩，整排再滑回）
+            clearPreview();       // 点筒身 = 把片头收回盒里
           }
         });
 
@@ -704,107 +686,45 @@
       cabinet.appendChild(rowEl);
     });
 
-    // ══ 触屏两步交互：先居中抽片头，再点翻开（与 Archive 书架同构）══
-    // 手机上没有 hover，点筒的第一下 = 把这卷推到这排的屏幕中心、抽出片头，
-    // 再点一下才真正翻开。点其他筒切换预览、点空白收回。
-    // 桌面不做居中位移（筒一动光标底下就换卷，会抖），hover 原位抽片头即可。
+    // ══ 触屏两步交互：先抽片头，再点胶片翻开 ══════════════════════
+    //
+    // 手机上没有 hover，所以：
+    //   第一击点筒     → 原地抽出片头，把后面的筒往右挤开
+    //   第二击点胶片   → 翻开进阅读视图
+    //   第二击点筒身   → 把片头收回盒里
+    //   点空白 / 点别的筒 → 收回 / 换一卷
+    //
+    // ⚠️ 筒是钉在原地的，整排永远不平移。别再加回"把选中的这卷推到屏幕
+    // 中心"那套逻辑——试过，是坏的：片头向右抽出、整排却向左平移，两个
+    // 动作方向相反，被选中的筒因为互相抵消而看起来原地不动，两侧的邻筒
+    // 各自朝反方向退开，视觉上像"从中间被掰开"而不是"抽出一条胶片"。
+    // （实测点第 2 个筒：前面的筒 −72px、后面的 +148px。第一个和最后一个
+    // 筒只有一侧邻居，所以那两个反而看着正常——这个差异就是当时的线索。）
+    //
+    // 现在触屏和桌面是完全相同的物理：筒不动，只有片头往右伸，把后面的
+    // 筒推走。想看被挡住的那些，先把片头收回去。
+    //
+    // 代价（已知、作者认可）：靠右边的筒抽出片头时，片头会伸到屏幕外看不见。
+    // 真要处理的话不是加回居中，而是限制一排最多放几卷。
 
-    var previewSlot = null;   // 当前居中预览的筒
-    var previewCans = null;   // 它所在的 .row-cans（收回时归位）
-
-    // 两拍之间的间隔：第一拍（整排滑动 0.32s）走到约六成时，第二拍（抽片头）开始。
-    // 不等第一拍完全停住是有意的——完全停住再动会显得一顿一顿，
-    // 略微搭接读起来仍有先后，但是连贯的一个动作。总时长约 0.2 + 0.38 = 0.58s。
-    var SLIDE_LEAD   = 200;
-    var seqTimer     = null;  // 第二拍：抽片头
-    var retractTimer = null;  // 收回时的第二拍：整排滑回原位
+    var previewSlot = null;   // 当前抽出片头的筒
 
     // 每次点击时现查设备是否无光标（触屏），不在加载时缓存
     function isTouchMode() {
       return !window.matchMedia('(hover: hover)').matches;
     }
 
-    // 把某个筒居中并抽出片头 —— 分两拍：先滑动整排，再抽片头
-    function previewRoll(slot, cans) {
+    // 原地抽出片头
+    function previewRoll(slot) {
       clearPreview();
       previewSlot = slot;
-      previewCans = cans;
-
-      centerCansOn(slot, cans);          // 第一拍：整排滑动
-
-      // 系统开了"减弱动态效果"就不排队了，直接到位（否则等待期会像卡住）
-      if (typeof fluidReducedMotion === 'function' && fluidReducedMotion()) {
-        slot.classList.add('preview');
-        return;
-      }
-      seqTimer = setTimeout(function () {   // 第二拍：抽片头
-        slot.classList.add('preview');
-        seqTimer = null;
-      }, SLIDE_LEAD);
+      slot.classList.add('preview');
     }
 
-    // 计算这排的筒需要平移多少，才能让这个筒（按展开后的目标宽度）的中心对准屏幕中心
-    // 按目标布局直接算，不等动画走完——位移和抽片头走同一条缓动曲线，同时到位
-    function centerCansOn(slot, cans) {
-      var slots = Array.prototype.slice.call(cans.children);
-      var gap = 14;
-      var widths = slots.map(function (s) {
-        var w = parseFloat(s.style.getPropertyValue('--w'));
-        // 展开后要加的片头长度按格式走（135 长 / 120 近方），别再用固定 220
-        var lw = parseFloat(s.style.getPropertyValue('--lw')) || LEADER_W;
-        return (s === slot) ? w + lw : w;
-      });
-      var idx = slots.indexOf(slot);
-      var before = 0;
-      for (var i = 0; i < idx; i++) before += widths[i] + gap;
-      // 目标布局下这个筒的屏幕中心位置 = 容器左缘 + 前面所有筒 + 自身一半
-      var left = cans.getBoundingClientRect().left - getTranslateX(cans);
-      var slotCenter = left + before + widths[idx] / 2;
-      var delta = window.innerWidth / 2 - slotCenter;
-      cans.style.transform = 'translateX(' + delta + 'px)';
-    }
-
-    // 读取容器当前的 translateX（还原前的基准位置用）
-    function getTranslateX(el) {
-      var t = el.style.transform;
-      var m = t && t.match(/translateX\((-?[\d.]+)px\)/);
-      return m ? parseFloat(m[1]) : 0;
-    }
-
-    /**
-     * 收回预览。
-     *
-     * sequenced = true  —— 用户主动收回（点胶卷盒、点空白处）：也分两拍，
-     *                      顺序反过来，片头先缩回盒里，再让整排滑回原位。
-     *                      不这么做的话，收回时会重演"两侧反向"的割裂感。
-     * sequenced = 不传  —— 立即归位。用在两种场合：
-     *                      ① 打开阅读视图（整排不该在阅读视图升起时还慢慢滑）
-     *                      ② 切换到另一卷（紧接着的 centerCansOn 会覆盖它）
-     */
-    function clearPreview(sequenced) {
-      cancelSeq();
-      if (previewSlot) previewSlot.classList.remove('preview');   // 片头先收
-      var cans = previewCans;
+    // 把片头收回盒里
+    function clearPreview() {
+      if (previewSlot) previewSlot.classList.remove('preview');
       previewSlot = null;
-      previewCans = null;
-      if (!cans) return;
-
-      var reduced = typeof fluidReducedMotion === 'function' && fluidReducedMotion();
-      if (!sequenced || reduced) {
-        cans.style.transform = '';
-        return;
-      }
-      retractTimer = setTimeout(function () {   // 第二拍：整排滑回原位
-        cans.style.transform = '';
-        retractTimer = null;
-      }, SLIDE_LEAD);
-    }
-
-    // 取消还没执行的那一拍（切换胶卷或收回时必须先取消，否则旧的定时器
-    // 会在新动作已经开始之后才触发，把整排的位移抹掉）
-    function cancelSeq() {
-      if (seqTimer)     { clearTimeout(seqTimer);     seqTimer = null; }
-      if (retractTimer) { clearTimeout(retractTimer); retractTimer = null; }
     }
 
     // 点柜子以外的空白处 = 收回预览（阅读视图打开时不管）
@@ -812,7 +732,7 @@
       if (!previewSlot) return;
       if (reader.classList.contains('open')) return;
       if (e.target.closest && e.target.closest('.bay')) return;
-      clearPreview(true);   // true = 分两拍收回
+      clearPreview();
     });
 
     // ══ 第二部分：阅读视图 ══════════════════════════════════════
