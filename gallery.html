@@ -135,8 +135,9 @@
 
       card.innerHTML =
         // 封面图片区域：4:3 容器，没有悬停效果（按压反馈在卡片整体上）
+        // 封面卡最宽 ~400px，用 1280 小图（fluidSmallSrc）绰绰有余，桌面也省 3/4 流量
         '<div class="relative aspect-[4/3] overflow-hidden bg-site-surface">' +
-          '<img src="' + coverSrc + '" alt="' + series.titleZh + ' 封面" class="w-full h-full object-cover" />' +
+          '<img src="' + fluidSmallSrc(coverSrc) + '" alt="' + series.titleZh + ' 封面" class="w-full h-full object-cover" />' +
         '</div>' +
 
         // 系列信息区：标题（中英）+ 年份地点

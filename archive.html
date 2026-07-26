@@ -326,7 +326,8 @@
 
     <!-- 照片区 + 定高页脚（页码位置不随照片比例移动） -->
     <div class="page-photo" id="page-photo">
-      <img id="page-img" src="" alt="" draggable="false" class="border border-site-text" />
+      <!-- sizes=100vw：配合 JS 写入的 srcset，手机取 1280 小图、高分屏桌面取原图 -->
+      <img id="page-img" src="" alt="" sizes="100vw" draggable="false" class="border border-site-text" />
     </div>
     <div class="page-footer">
       <!-- 自定义文字（data.js 里逐张加 note 字段，没写就整行消失） -->
@@ -390,7 +391,8 @@
         '<div class="spine-label font-display text-site-text">' + year + '</div>' +
         // 封面态：照片图版（与全站同款 1px 描边）+ 年份 + 张数
         '<div class="cover-view">' +
-          (cover ? '<img src="' + cover + '" alt="' + year + ' 封面" loading="lazy" class="border border-site-text" />' : '') +
+          // 封面展开态只有 ~220px 宽，1280 小图（fluidSmallSrc）绰绰有余
+          (cover ? '<img src="' + fluidSmallSrc(cover) + '" alt="' + year + ' 封面" loading="lazy" class="border border-site-text" />' : '') +
           '<div class="font-display text-2xl tracking-widest mt-4 text-site-text">' + year + '</div>' +
           '<div class="text-xs tracking-widest text-site-muted mt-1">' + photos.length + ' PHOTOS</div>' +
         '</div>';
@@ -546,6 +548,7 @@
       if (!p) return;
       viewEnd.style.display   = 'none';
       photoArea.style.display = '';
+      pageImg.srcset = fluidSrcset(p.src);   // 手机取 1280 小图，高分屏桌面取原图
       pageImg.src = p.src;
       pageImg.alt = p.alt || (currentYear + ' 散片');
       imgGuard.mark();   // 照片还在路上就压暗提示；到了自动恢复并预加载相邻页

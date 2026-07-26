@@ -470,7 +470,8 @@
             <span id="edge-stock"></span>
             <span id="edge-frame"></span>
           </div>
-          <img id="page-img" src="" alt="" draggable="false" />
+          <!-- sizes=100vw：配合 JS 写入的 srcset，手机取 1280 小图、高分屏桌面取原图 -->
+          <img id="page-img" src="" alt="" sizes="100vw" draggable="false" />
           <div id="perf-b" class="perf"></div>
         </div>
       </div>
@@ -680,7 +681,8 @@
             '<div class="strip-img">' +
               // 不用 loading="lazy"：片头藏在 overflow:hidden 里，浏览器视作"不可见"
               // 会永不加载，fluidReveal 等不到解码完成，筒就永远不浮现
-              (cover ? '<img src="' + cover + '" alt="' + roll.stock + ' 片头" />' : '') +
+              // 片头窗口只有 ~200px 宽，1280 小图（fluidSmallSrc）绰绰有余
+              (cover ? '<img src="' + fluidSmallSrc(cover) + '" alt="' + roll.stock + ' 片头" />' : '') +
             '</div>' +
             '<div class="perf"></div>' +
             // 片头舌挂在条的末端，跟着整条一起滑（120 是封好的纸卷，没有舌）
@@ -888,6 +890,7 @@
       viewPhoto.style.display = '';
       // 片框制式：135 齿孔 / 120 素边
       filmFrame.classList.toggle('f120', currentRoll.format === '120');
+      pageImg.srcset = fluidSrcset(p.src);   // 手机取 1280 小图，高分屏桌面取原图
       pageImg.src = p.src;
       pageImg.alt = p.alt || (currentRoll.stock + ' 第 ' + (currentIndex + 1) + ' 格');
       imgGuard.mark();   // 照片还在路上就压暗提示；到了自动恢复并预加载相邻格

@@ -84,6 +84,16 @@ done
 
 done_count=$(ls "$DST"/*.jpeg 2>/dev/null | wc -l | tr -d ' ')
 echo "完成：输出 $done_count 张，校验问题 $bad 处。"
+
+# ── 顺手生成手机小图档（assets/images-sm/，1280/q85）──
+# 页面按路径规则直接引用小图，缺一张就是一个 404 破图，所以必须跟着生成。
+# 脚本是增量的：只处理新加的这批，几秒钟的事
+if [ -f "scripts/make-small-images.py" ]; then
+  echo
+  echo "生成手机小图档…"
+  python3 scripts/make-small-images.py
+fi
+
 if [ "$bad" -eq 0 ]; then
   echo "源文件夹未删除 —— 确认无误后手动执行：  rm -rf \"$SRC\""
 fi

@@ -193,7 +193,8 @@
 
       <!-- 照片区：可拖拽 / 滑动切换 -->
       <div id="lightbox-photo-area" class="flex-1 flex items-center justify-center min-w-0 w-full">
-        <img id="lightbox-img" src="" alt=""
+        <!-- sizes=100vw：配合 JS 写入的 srcset，手机取 1280 小图、高分屏桌面取原图 -->
+        <img id="lightbox-img" src="" alt="" sizes="100vw"
           class="max-h-[55vh] md:max-h-[80vh] max-w-full object-contain"
           draggable="false" />
       </div>
@@ -344,7 +345,9 @@
 
       el.innerHTML =
         '<div class="overflow-hidden relative">' +
-          '<img src="' + src + '" alt="' + alt + '" loading="lazy" ' +
+          // 瀑布流缩略图用 1280 小图就够了（一列最宽 ~420px，视网膜屏 ×2 也才 840px）——
+          // 桌面打开一个系列从 20+MB 降到 ~5MB
+          '<img src="' + fluidSmallSrc(src) + '" alt="' + alt + '" loading="lazy" ' +
                'class="w-full transition-transform duration-700 group-hover:scale-[1.02]" />' +
           badge +
         '</div>' +
@@ -451,8 +454,10 @@
 
       if (item.kind === 'photo') {
         viewPhoto.style.display = '';
-        document.getElementById('lightbox-img').src = item.photo.src;
-        document.getElementById('lightbox-img').alt = item.photo.alt;
+        var lbImg = document.getElementById('lightbox-img');
+        lbImg.srcset = fluidSrcset(item.photo.src);   // 手机取 1280 小图，高分屏桌面取原图
+        lbImg.src = item.photo.src;
+        lbImg.alt = item.photo.alt;
         imgGuard.mark();   // 照片还在路上就压暗提示；到了自动恢复并预加载相邻条目
         // 显示计数和当前章节英文名（如果在分章系列里）
         counterEl.textContent = getCounter();
@@ -472,6 +477,8 @@
         stack.innerHTML = '';
         item.photos.forEach(function(photo) {
           var img = document.createElement('img');
+          img.sizes = '100vw';                        // 与主图同一套：手机小图/桌面原图
+          img.srcset = fluidSrcset(photo.src);
           img.src = photo.src; img.alt = photo.alt || '';
           img.className = 'w-full'; img.setAttribute('loading', 'lazy');
           img.draggable = false;   // 禁掉浏览器原生的"拖图片"，让位给我们的滑动手势

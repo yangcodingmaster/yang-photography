@@ -88,6 +88,7 @@
 │
 ├── scripts/                # 维护脚本（不是网站的一部分，不影响访客）
 │   ├── deploy.sh           #    ⭐ 日常部署就这一条：rsync 增量同步到腾讯云
+│   ├── make-small-images.py#    ⭐ 生成手机小图档（增量；加了照片跑一次）
 │   ├── share-card.html     #    分享缩略图的"模具"，浏览器截图用
 │   ├── make-share-card.sh  #    换分享图照片时跑它
 │   ├── set-domain.py       #    换域名时跑它（往 og 标签注入真实域名）
@@ -98,6 +99,9 @@
 │   │   ├── tailwind.js     #    Tailwind 运行时（407KB）
 │   │   ├── fonts.css       #    字体声明，由 fetch-fonts.py 生成，别手改
 │   │   └── fonts/          #    210 个 woff2 分片（约 12MB）
+│   ├── images-sm/          # ⭐ 手机小图档（1280/q85），目录结构与 images/ 完全同构
+│   │                       #    由 scripts/make-small-images.py 生成；share/ 不生成
+│   │                       #    页面按路径规则推导引用，缺一张就是 404，别手动删
 │   └── images/
 │       ├── README.txt
 │       ├── share/          # 分享卡片缩略图（share-card.jpg，1200×1200）
@@ -469,7 +473,8 @@ var allFilms = [
 3. 在 `data.js` 的 `allArchive['YYYY']` 数组**最前面**加一行 `{ src: 'assets/images/archive/YYYY/xxx.jpg', alt: '' }`
    （放最前面 = 它成为这本书的封面和第一页；想配一句话页脚就再加 `note: '…'` 字段）
 4. 想加新一年（如 2026）：在 `allArchive` 里加 `'2026': []`，书架上会自动多一本书（书脊宽度随照片数长粗）
-5. 刷新 `archive.html`（浏览器缓存 data.js 时用 Cmd+Shift+R 硬刷新）
+5. **跑一次 `python3 scripts/make-small-images.py`**（生成手机小图档，增量的、几秒钟）
+6. 刷新 `archive.html`（浏览器缓存 data.js 时用 Cmd+Shift+R 硬刷新）
 
 ### 如何往 Film 加一卷
 
@@ -481,13 +486,22 @@ var allFilms = [
    （lens/title/desc 可留空自动隐藏；⚠️ 新型号需在 film.html 的 `SHELL_STYLES` 补一行配色）
 4. 同型号的卷会自动归到同一排搁板；新型号 = 柜子里自动多一排；
    **同排内把卷按时间先后排在数组里**（早的在前 = 站在左边），日期精确到月（如 `2024.06`）
-5. 刷新 `film.html`（浏览器缓存 data.js 时用 Cmd+Shift+R 硬刷新）
+5. **跑一次 `python3 scripts/make-small-images.py`**（生成手机小图档，增量的、几秒钟）
+6. 刷新 `film.html`（浏览器缓存 data.js 时用 Cmd+Shift+R 硬刷新）
 
 ### 支持的图片格式与压缩标准
 
 - 浏览器最终用的是 **JPEG**。相机直出常是 HEIC/HIF（哪怕扩展名写成 `.jpeg`），HEIF 浏览器支持度低，**必须转成真 JPEG**。
-- **图片压缩标准（固定）**：HEIC→JPEG、**长边 2560px、质量 90**。这是网页展示的安全甜点——视觉无损、体积约降到 1/10。改这个标准要另行说明（如印刷级别）。
-- 转码压缩交给 `add-gallery-series` skill 的 `scripts/convert_photos.sh` 自动完成（macOS 用 `sips`）。
+- **图片是两档制**（2026-07 起，作者拍板）：
+  - **原图档**：HEIC→JPEG、**长边 2560px、质量 90**（`assets/images/`）——给高分屏桌面
+  - **手机小图档**：**长边 1280px、质量 85**（`assets/images-sm/`，目录结构与原图完全同构）
+    ——手机屏幕用不到 2560，而服务器出口只有 ~400KB/s，小图把翻页等待从 ~3s 降到 ~1s 内。
+    由 `scripts/make-small-images.py` 生成（增量，加了照片再跑一次即可）；
+    页面靠 `fluid.js` 的 `fluidSmallSrc / fluidSrcset` 按路径规则推导引用，
+    **缺一张小图就是一个 404 破图**，脚本末尾的数量自检必须是"一致"
+  - ⚠️ **glitch 作品绝不重编码**：脚本按码流检测自动识别（17 张），原字节拷贝进小图档
+    ——不同解码器渲染损坏码流的结果不同，重编码等于替作者选定一种渲染
+- 转码压缩交给 `add-gallery-series` skill 的 `scripts/convert_photos.sh` 自动完成（macOS 用 `sips`，末尾会自动补跑小图脚本）。
 - ⚠️ 入库的都是缩小过的网页版；**HEIC 原片请在仓库外另存备份**（印刷/二次修图要用原片）。
 
 ---
@@ -686,6 +700,10 @@ rsync 增量同步到腾讯云，**只传变化的部分** —— 改几行文�
 - **`createSwipeControl(rootEl, hooks)`** — 手势控制器：10px 迟滞 + 方向锁定（竖向让给原生滚动）、
   1:1 跟手、松手决策、两段式换图动画（滑出渐隐 → swap → 反向滑入渐显）、拖拽后吞 click 防误触
 - **手感参数**都在 `createSwipeControl` 顶部（HYSTERESIS/COMMIT_DIST/OUT_DIST/IN_DIST/FLICK_CLOSE），改前三思
+- **`fluidSmallSrc(src)` / `fluidSrcset(src)`** — 小图档路径规则：`assets/images/ → assets/images-sm/`
+  （⚠️ 与 `scripts/make-small-images.py` 是一对约定，改一边必须改另一边；index.html 不加载
+  fluid.js，那边有一份两行的就地副本 `heroSrcset`）。阅读视图主图用 srcset + `sizes="100vw"`
+  让浏览器自己挑（手机 1280 / 高分屏桌面 2560）；网格缩略图、封面、片头直接用小图
 - **`fluidPreload(srcs)` / `fluidLoadingGuard(img, onReady)`** — 照片加载辅助（三个阅读视图共用）：
   照片平均 1.16MB、服务器出口约 400KB/s，翻页后新照片要几秒才到，而浏览器在新图到达前
   会一直显示旧图不吭声（2026-07 真机报的"永远停在第一张"就是这个，翻页逻辑本身没坏）。

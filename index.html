@@ -172,16 +172,34 @@
     var idx      = 0;
     var showingA = true;
 
-    // 预加载下一张，避免切换时白屏
+    // 小图档 srcset：手机取 1280 小图、高分屏桌面取 2560 原图。
+    // 路径规则（assets/images/ → assets/images-sm/）与 fluid.js 的 fluidSrcset
+    // 是同一套约定 —— 本页不加载 fluid.js（没有手势），所以就地放一份副本
+    function heroSrcset(src) {
+      return src.replace('assets/images/', 'assets/images-sm/') + ' 1280w, ' + src + ' 2560w';
+    }
+    // 照片最宽占 78vw（见上面 .hero-photo），告诉浏览器按这个尺寸挑候选
+    slotA.sizes = '78vw';
+    slotB.sizes = '78vw';
+
+    // 把一张照片放进一个 slot（srcset 和 src 一起换，浏览器自己挑大小图）
+    function setPhoto(slot, photo) {
+      slot.srcset = heroSrcset(photo.src);
+      slot.src = photo.src;
+      slot.alt = photo.alt;
+    }
+
+    // 预加载下一张，避免切换时白屏（srcset 和显示时一致，预热的就是将要用的那张）
     function preload(src) {
       var img = new Image();
+      img.sizes = '78vw';
+      img.srcset = heroSrcset(src);
       img.src = src;
     }
 
     // 显示第一张
     if (photos.length) {
-      slotA.src = photos[0].src;
-      slotA.alt = photos[0].alt;
+      setPhoto(slotA, photos[0]);
       slotA.classList.add('is-visible');
       if (photos.length > 1) preload(photos[1].src);
     }
@@ -195,8 +213,7 @@
         var leave = showingA ? slotA : slotB;
 
         // 把下一张放进当前不可见的 slot，然后切换可见状态
-        enter.src = next.src;
-        enter.alt = next.alt;
+        setPhoto(enter, next);
         enter.classList.add('is-visible');
         leave.classList.remove('is-visible');
 

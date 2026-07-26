@@ -162,10 +162,32 @@ function revealWhenReady(el, delay) {
 //                                  并回调 cb（页面用它接着预加载相邻照片——
 //                                  等当前图到了再预热邻图，不跟它抢带宽）
 
+// ── 小图档路径规则 ────────────────────────────────────────────────
+// 每张照片都有一个 1280px/q85 的手机档，由 scripts/make-small-images.py 生成：
+//     assets/images/…/xx.jpeg  →  assets/images-sm/…/xx.jpeg
+// ⚠️ 这条替换规则和那个脚本是一对约定，改一边必须改另一边。
+// 为什么要小图档：原图平均 1.16MB 是给桌面高分屏定的，手机用不到那么多像素，
+// 而服务器出口只有 ~400KB/s——小图档把手机翻页等待从 ~3 秒降到 ~1 秒内。
+function fluidSmallSrc(src) {
+  return src.replace('assets/images/', 'assets/images-sm/');
+}
+
+// 阅读视图主图的 srcset：浏览器按"显示尺寸 × 屏幕密度"自己挑
+// （手机 → 1280 小图；高分屏桌面 → 2560 原图，桌面画质零损失）
+function fluidSrcset(src) {
+  return fluidSmallSrc(src) + ' 1280w, ' + src + ' 2560w';
+}
+
 // 预加载：让浏览器把这些图悄悄拉进缓存（重复调用无害，缓存直接命中）
+// 用和阅读视图主图相同的 srcset + sizes——预热的必须正是待会儿要显示的
+// 那个候选，不然手机预热了 2560 原图、显示时却去拿 1280 小图，全白热
 function fluidPreload(srcs) {
   (srcs || []).forEach(function (src) {
-    if (src) { (new Image()).src = src; }
+    if (!src) return;
+    var im = new Image();
+    im.sizes = '100vw';
+    im.srcset = fluidSrcset(src);
+    im.src = src;                    // 兜底（不认识 srcset 的老浏览器）
   });
 }
 
