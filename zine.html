@@ -85,10 +85,27 @@
       transform: translateY(14px);
       transition: opacity .45s ease, transform .45s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    .zr.on { opacity: 1; transform: translateY(0); }
+    /* 落定感（脚本顶部 SETTLE_SCALE 开关）：上浮之外叠加极轻的 0.985→1，
+       像实物放上纸面。不喜欢就把开关改成 false，一个词的事 */
+    body.zine-settle .zr { transform: translateY(14px) scale(0.985); }
+    .zr.on, body.zine-settle .zr.on { opacity: 1; transform: none; }
+    /* 文字比照片晚一拍到场（约 100ms）：先看画、再读签的次序感 */
+    .zr-late { transition-delay: .1s; }
     @media (prefers-reduced-motion: reduce) {
-      .zr { transform: none; transition: opacity .45s ease; }
+      .zr, body.zine-settle .zr { transform: none; transition: opacity .45s ease; }
     }
+
+    /* ── 按压态：反馈发生在按下的瞬间（Apple 的 Response 原则），
+       与 gallery 卡片 / archive 书脊的既有约定同一家族。
+       注：链接都带 Tailwind 的 transition-colors，它会盖掉元素级的过渡，
+       所以用 a.transition-colors 提高优先级，把颜色和形变的过渡合在一起 ── */
+    a { display: inline-block; transition: transform .1s ease-out; }
+    a.transition-colors {
+      transition-property: color, transform;
+      transition-duration: .15s, .1s;
+      transition-timing-function: ease, ease-out;
+    }
+    a:active { transform: scale(0.97); }
   </style>
 </head>
 
@@ -122,6 +139,10 @@
     //   'alternate' = 左右交替（对开节奏，一次只见一页时感知较弱，备用）
     // 个别照片想反着放：在 data.js 里写 layout: 'panel-left' 逐张覆盖
     var PANEL_SIDE = 'right';
+
+    // 浮现时的"落定感"（0.985→1 的极轻缩放）：不喜欢改成 false
+    var SETTLE_SCALE = true;
+    if (SETTLE_SCALE) document.body.classList.add('zine-settle');
 
     // ═══ 工具函数 ═══════════════════════════════════════════════
 
@@ -292,7 +313,7 @@
           imgBox.appendChild(makeImg(photo.src, photo.alt, '(min-width: 768px) 60vw, 92vw', eager));
           stage.appendChild(imgBox);
           var panel = el('div', 'shrink-0 w-full md:w-72 md:pb-6' +
-            (layout === 'panel-left' ? ' md:text-right' : '') + (eager ? '' : ' zr'));
+            (layout === 'panel-left' ? ' md:text-right' : '') + (eager ? '' : ' zr zr-late'));
           if (photo.caption)  panel.appendChild(el('p', (isZh(photo.caption) ? 'font-zh' : 'font-display') + ' text-lg', photo.caption));
           var dl = [photo.date, photo.location].filter(Boolean).join(' · ');
           if (dl)             panel.appendChild(el('p', 'font-display text-sm text-site-muted mt-2 tracking-wide', dl));
@@ -305,7 +326,7 @@
         } else if (layout === 'margin') {
           // ── 页边批注：文字缩到页边角落，小小一条 ──
           stage = el('div', 'flex-1 min-h-0 flex flex-col md:flex-row items-center md:items-end justify-center gap-6 md:gap-10 max-w-6xl mx-auto w-full');
-          var note = el('div', 'order-2 md:order-1 shrink-0 w-full md:w-40 md:pb-10' + (eager ? '' : ' zr'));
+          var note = el('div', 'order-2 md:order-1 shrink-0 w-full md:w-40 md:pb-10' + (eager ? '' : ' zr zr-late'));
           var noteText = [photo.caption, photo.note || photo.desc].filter(Boolean).join('\n');
           var noteP = el('p', 'font-zh text-xs leading-[2] text-site-muted');
           noteP.style.whiteSpace = 'pre-line';   // 换行符生效（JS 动态控制的例外）
@@ -329,7 +350,7 @@
           });
           sec.appendChild(stage);
           if (layout === 'group-text' || photo.caption) {
-            var gt = el('div', 'shrink-0 text-center pt-4' + (eager ? '' : ' zr'));
+            var gt = el('div', 'shrink-0 text-center pt-4' + (eager ? '' : ' zr zr-late'));
             if (photo.caption) gt.appendChild(el('p', (isZh(photo.caption) ? 'font-zh' : 'font-display') + ' text-sm', photo.caption));
             if (photo.desc)    gt.appendChild(el('p', 'font-zh text-sm text-site-muted mt-1', photo.desc));
             sec.appendChild(gt);
