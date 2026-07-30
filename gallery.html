@@ -117,11 +117,12 @@
     var grid = document.getElementById('series-grid');
     allSeries.forEach(function(series) {
 
-      // 创建卡片：点击跳转到 series.html?id=系列ID
+      // 创建卡片：点击进入画册式阅读（zine.html，2026-07-30 转正，替代旧的
+      // series.html 瀑布流 + Lightbox；旧页面保留在仓库里作回退，改回这一行即可）
       // 注意：没有 hover overlay 等"网页味"悬停动效；但有一个极轻的"按压态"——
       // 按下瞬间缩到 0.99（即时反馈），松开 100ms 缓出。这是有意加的，不要"修复"掉
       var card = document.createElement('a');
-      card.href = 'series.html?id=' + series.id;
+      card.href = 'zine.html?id=' + series.id;
       card.className = 'block transition-transform duration-100 ease-out active:scale-[0.99] active:duration-0';
 
       // 拼接年份/地点，空字段自动跳过（避免出现 "2025 ·  · " 这种残缺分隔符）
