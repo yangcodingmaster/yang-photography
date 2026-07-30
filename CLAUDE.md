@@ -43,6 +43,7 @@
 | `add-gallery-series` skill | ✅ 完成 | 固化"加 Gallery 系列"工作流，见下方"配套 skill" |
 | 交互升级（fluid.js） | ✅ 完成 | Apple 流体交互：1:1 跟手拖拽、橡皮筋边界、方向感换图、按压态、滚动浮现、reduced-motion（`interaction-design` 分支开发） |
 | 手机加载提速 | ✅ 上线 | 小图档（594MB→114MB）+ srcset + 相邻预加载 + 在路上压暗（`photo-nav-fix` 分支）；瓶颈=服务器 400KB/s 出口，根治靠备案后上 CDN |
+| 画册式阅读实验 | 🧪 实验中 | `zine.html?id=` 通用模板 + 7 个探索原型（`zine-scroll-experiment` 分支）；详见"画册式阅读实验"一节，作者手册见 `画册维护手册.md` |
 | 填写真实文案 | ⬜ 进行中 | 各系列 descZh/descEn、照片 caption/desc、关于页（作者逐张手填） |
 
 ### Gallery 系列清单（按 gallery 页展示顺序）
@@ -526,6 +527,42 @@ var allFilms = [
 
 ---
 
+## 画册式阅读实验（zine-*，实验中）
+
+> 2026-07-30 起的大改版实验：点开系列不再是"瀑布流网格 + Lightbox 翻页"两段式，
+> 而是**一本往下滚的画册**——每屏一张照片（100dvh + scroll-snap 吸附），滑一下翻一页。
+> 作者已实机评审原型并拍板方向（满屏一张式 + 图文模块），**是否转正待最终体验后决定**。
+> 作者侧的完整教程（加照片/删照片/加系列/调版式）在 **`画册维护手册.md`**，别重复写。
+
+### 文件清单
+
+| 文件 | 说明 |
+|---|---|
+| `zine.html` | ⭐ 通用画册模板，`?id=系列ID`（与 series.html 同一套 ID），八个系列全兼容，分章系列自动插章节扉页 |
+| `zine-dims.js` | 图片宽高表（防加载跳版）。`scripts/make-zine-dims.py` 生成，**勿手改**；加照片后重跑 |
+| `zine-index.html` | 评审目录页（正式模板 + 原型），转正后可删 |
+| `zine-gallery-a~e.html`、`zine-film.html`、`zine-archive.html` | 探索原型（比稿材料），转正后可整批删，历史在 git |
+
+### zine.html 模板要点（改它之前必读）
+
+- **版式两层规则**：照片条目写了 `layout` 听 `layout`（`panel-right / panel-left / margin / caption / plain`）；
+  没写走自动规则——有 `desc`→左右面板、有 `note`→页边批注、只有 `caption`→图下注、全空→纯照片页
+- **插页**：photos 数组里 `{ text: '……' }` = 独立文字页、`{ blank: true }` = 空白页，都不占页码
+- **顶部开关**（脚本最上面，作者自己改）：`PANEL_SIDE`（面板 right/left/alternate，默认 right）、
+  `SETTLE_SCALE`（浮现落定感开关）
+- **翻页浮现**：IntersectionObserver 为主 + 滚动事件兜底（兜底节流用 setTimeout 不用 rAF——
+  要兜底的正是渲染循环异常的环境）；`.zr-late` 让文字比照片晚 100ms 到场；减弱动态时只淡入
+- **不引 fluid.js**：翻页交给浏览器原生滚动 + 吸附，这是有意的架构选择（没有代码的地方没有 bug）；
+  别为了"统一"把手势引擎接进来
+- **正式页面零改动是刻意的**：画册是叠加的平行体验，series.html / gallery.html 等一个字没动。
+  转正的动作 = gallery 卡片点击目标从 `series.html?id=` 换成 `zine.html?id=`（一行）+ 删原型文件
+
+### 与既有体系的关系
+
+- 数据仍然只有 `data.js` 一份：作者填文案一处生效两套页面；Archive/Film 的画册化有原型但未正式化
+- 加照片的维护链多一步：`make-small-images.py` 之后跑 `make-zine-dims.py`
+- 回退保险：实验全部是新增文件；GitHub 上 revert PR 即回原样；腾讯云只在手动跑 deploy.sh 时更新
+
 ## 分享卡片与国内部署
 
 ### 为什么迁到了国内节点（已完成）
@@ -823,8 +860,11 @@ tailwind.config = {
       Resend 验证发件域名。详见"备案通过后还剩三步"
 
 ### 待作者决定
+- [ ] **画册式阅读是否转正** —— 在 GitHub Pages / 本地实机体验 `zine-index.html` 后拍板。
+      转正 = gallery 点击目标切到 `zine.html?id=`（一行改动）+ 删七个探索原型；
+      不转正 = 删全部 zine-* 文件即回原样。另：Film / Archive 的画册化只有原型，转正时再讨论
 - [ ] **GitHub Pages 怎么处理** —— 现在是第二个线上副本且留言表单是坏的，
-      见"两个线上副本"一节。建议关掉
+      见"两个线上副本"一节。建议关掉（⚠️ 画册实验期它临时充当作者的海外预览环境，先留着）
 
 ### 待填文案（只有作者本人能做）
 - [ ] 各系列 `descZh` / `descEn`，照片 `caption` / `date` / `location` / `desc` / `meta`
