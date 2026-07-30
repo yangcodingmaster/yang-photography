@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>画册 — Yang Photography</title>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ⚠️ 画册通用模板（zine-scroll-experiment 分支，试验中）
+
+       用法：zine.html?id=系列ID（与 series.html 的 ?id= 同一套 ID）
+
+       作者评审后拍板的组合（2026-07-30）：
+       · 底座 = 满屏一张式：每页 100dvh + 滚动吸附，任何设备眼前只有一张照片
+       · 图文模块：左右面板（对开交替）/ 页边批注 / 图下注 / 纯照片页 / 独立文字页
+       · 翻到哪页，照片轻轻浮上来（450ms 无回弹，抄 fluidReveal 的手感；
+         系统开了"减弱动态"则只淡入不上浮；首张照片不做入场式）
+
+       每页用哪种图文模式，由 data.js 决定，两层规则：
+       ① 显式指定：照片条目写 layout 字段 —— 'panel-right' 图左文右 /
+          'panel-left' 图右文左 / 'margin' 页边批注 / 'caption' 图下注 / 'plain' 纯照片
+       ② 不写 layout 走自动规则（按已有字段的语义，不需要作者额外劳动）：
+          有 desc 长描述 → 左右面板逐张交替（书籍对开的节奏）
+          有 note 一句话 → 页边批注
+          只有 caption   → 图下注
+          什么都没有     → 纯照片页
+       独立文字页：photos 数组里插一条 { text: '……' }，写在哪就出现在哪
+       分章系列：每章自动插一页章节扉页（大数字 + 中英章题）
+       组图 { group: [...] }：同屏并排，共用一组文字
+       ═══════════════════════════════════════════════════════════ -->
+
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
+  <!-- Tailwind 运行时（本地副本）：与全站一致，别改回在线 CDN -->
+  <script src="assets/vendor/tailwind.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'site-bg':      '#fafaf7',
+            'site-surface': '#f2f2ef',
+            'site-border':  '#e0e0dc',
+            'site-text':    '#111111',
+            'site-muted':   '#8a8a85',
+            'site-accent':  '#111111',
+          },
+          fontFamily: {
+            'display': ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'body':    ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'zh':      ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- 字体（本地副本）：与全站一致 -->
+  <link href="assets/vendor/fonts.css" rel="stylesheet" />
+
+  <style>
+    /* ── 整屏分页 + 滚动吸附 ──
+       100dvh：手机地址栏收起/展开时页高自动跟随；老浏览器回退 100vh */
+    html { scroll-snap-type: y mandatory; }
+    .page {
+      height: 100vh;
+      height: 100dvh;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;   /* 一次滑动只翻一页 */
+    }
+    .page-foot { padding-bottom: max(0px, env(safe-area-inset-bottom)); }
+
+    /* ── 翻页浮现：照片（和文字块）第一次进入视野时轻轻浮上来 ──
+       只动 opacity/transform（GPU 合成，不触发排版）；曲线抄 fluidReveal：
+       450ms、14px、无回弹。系统"减弱动态"开着就只淡入。 */
+    .zr {
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity .45s ease, transform .45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .zr.on { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) {
+      .zr { transform: none; transition: opacity .45s ease; }
+    }
+  </style>
+</head>
+
+<body class="bg-site-bg text-site-text font-body antialiased">
+
+  <!-- 导航栏：与全站统一 -->
+  <nav class="fixed top-0 w-full z-50 bg-site-bg">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="index.html" class="font-display text-xl tracking-wide text-site-text hover:text-site-muted transition-colors">
+        Yang
+      </a>
+      <ul class="flex gap-8 text-sm text-site-muted">
+        <li><a href="gallery.html" class="text-site-text">Gallery</a></li>
+        <li><a href="archive.html" class="hover:text-site-text transition-colors">Archive</a></li>
+        <li><a href="film.html"    class="hover:text-site-text transition-colors">Film</a></li>
+        <li><a href="about.html"   class="hover:text-site-text transition-colors">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- 所有页面由脚本生成插到这里 -->
+  <main id="book"></main>
+
+  <script src="data.js"></script>
+  <script src="zine-dims.js"></script>
+  <script>
+    // ═══ 工具函数 ═══════════════════════════════════════════════
+
+    // 小图档路径规则（与 fluid.js 的 fluidSmallSrc 相同，本页就地一行）
+    function smallSrc(src) { return src.replace('assets/images/', 'assets/images-sm/'); }
+
+    // 是否含中文（决定用中文衬线还是 Cormorant）
+    function isZh(s) { return /[一-鿿]/.test(s || ''); }
+
+    // 中文数字（版权页用；单系列照片数不会过百）
+    function zhNumber(n) {
+      var d = ['零','一','二','三','四','五','六','七','八','九'];
+      if (n < 10) return d[n];
+      var tens = Math.floor(n / 10), ones = n % 10;
+      return (tens > 1 ? d[tens] : '') + '十' + (ones ? d[ones] : '');
+    }
+
+    // 建元素的简写：el('p', 'font-zh text-sm', '文字')
+    function el(tag, cls, text) {
+      var e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text) e.textContent = text;
+      return e;
+    }
+
+    // 造一张照片 img（带小图/原图 srcset 和宽高占位）
+    function makeImg(src, alt, sizes, eager) {
+      var img = document.createElement('img');
+      img.src = smallSrc(src);
+      img.srcset = smallSrc(src) + ' 1280w, ' + src + ' 2560w';
+      img.sizes = sizes;
+      img.alt = alt || '';
+      img.className = 'max-w-full max-h-full w-auto h-auto';
+      if (!eager) img.loading = 'lazy';
+      var dim = ZINE_DIMS[src];
+      if (dim) { img.width = dim[0]; img.height = dim[1]; }
+      return img;
+    }
+
+    // ═══ 读取系列 ═══════════════════════════════════════════════
+
+    var params = new URLSearchParams(location.search);
+    var seriesId = params.get('id') || '';
+    var series = allSeries.filter(function (s) { return s.id === seriesId; })[0];
+    var book = document.getElementById('book');
+
+    if (!series) {
+      // 无效 ID：给一页说明 + 回作品集的路
+      var err = el('section', 'page flex flex-col items-center justify-center px-6 text-center');
+      err.appendChild(el('p', 'font-zh text-lg', '没有找到这个系列'));
+      var back = el('a', 'font-display text-sm text-site-muted hover:text-site-text transition-colors mt-8', '→ Back to Gallery');
+      back.href = 'gallery.html';
+      err.appendChild(back);
+      book.appendChild(err);
+    } else {
+      document.title = series.titleZh + ' — Yang Photography';
+      buildBook();
+    }
+
+    // ═══ 组装整本画册 ═══════════════════════════════════════════
+
+    function buildBook() {
+      // 把系列摊平成条目流：分章系列每章前面插一条章节页
+      var entries = [];
+      if (series.type === 'sectioned') {
+        allChapters[seriesId].forEach(function (ch, ci) {
+          entries.push({ chapter: ch, index: ci });
+          ch.photos.forEach(function (p) { entries.push(p); });
+        });
+      } else {
+        entries = allPhotos[seriesId].slice();
+      }
+
+      // 照片总数（组图算一页）：给页码和版权页用
+      var totalPhotos = entries.filter(function (e) { return e.src || e.group; }).length;
+
+      // ── 封面页 ──
+      var cover = el('section', 'page flex flex-col items-center justify-center px-6 text-center');
+      var h1 = el('h1');
+      h1.appendChild(el('span', 'block font-zh text-4xl md:text-5xl leading-tight', series.titleZh));
+      h1.appendChild(el('span', 'block font-display text-xl md:text-2xl mt-4 text-site-muted', series.titleEn));
+      cover.appendChild(h1);
+      var metaLine = series.year + (series.location ? ' · ' + series.location : '');
+      cover.appendChild(el('p', 'font-display text-sm text-site-muted mt-6 tracking-wide', metaLine.trim()));
+      cover.appendChild(el('div', 'mt-10 h-px w-20 bg-site-border'));
+      if (series.descZh) {
+        cover.appendChild(el('p', 'font-zh text-sm md:text-base leading-[2] mt-10 max-w-[30em] text-site-muted', series.descZh));
+      }
+      book.appendChild(cover);
+
+      // ── 正文页 ──
+      var photoNo = 0;        // 照片页计数（页码 n / N）
+      var panelSide = 'right';// 面板左右交替的状态（对开节奏）
+
+      entries.forEach(function (entry) {
+        if (entry.chapter) { book.appendChild(chapterPage(entry.chapter, entry.index)); return; }
+        if (entry.text)    { book.appendChild(textPage(entry.text)); return; }
+        photoNo += 1;
+        book.appendChild(photoPage(entry, photoNo, totalPhotos));
+      });
+
+      // ── 版权页 ──
+      var end = el('section', 'page flex flex-col items-center justify-center px-6 text-center');
+      end.appendChild(el('div', 'h-px w-20 bg-site-border mb-10'));
+      end.appendChild(el('p', 'font-zh text-sm text-site-muted', zhNumber(totalPhotos) + '张照片'));
+      end.appendChild(el('p', 'font-display text-sm text-site-muted mt-1', series.titleEn + (series.year ? ' · ' + series.year.trim() : '')));
+      end.appendChild(el('p', 'font-display text-2xl mt-8', 'Yang'));
+      var back = el('a', 'inline-block font-display text-sm text-site-muted hover:text-site-text transition-colors mt-10', '→ Back to Gallery');
+      back.href = 'gallery.html';
+      end.appendChild(back);
+      book.appendChild(end);
+
+      revealSetup();
+
+      // ═══ 各种页的造法 ═════════════════════════════════════════
+
+      // 章节扉页：大数字 + 中英章题 + 简介（有才显示）
+      function chapterPage(ch, ci) {
+        var sec = el('section', 'page flex flex-col items-center justify-center px-6 text-center');
+        var wrap = el('div', 'zr');
+        var num = String(ci + 1);
+        wrap.appendChild(el('p', 'font-display text-6xl md:text-7xl text-site-muted', num.length < 2 ? '0' + num : num));
+        wrap.appendChild(el('h2', 'font-zh text-2xl md:text-3xl mt-6', ch.titleZh));
+        wrap.appendChild(el('p', 'font-display text-lg text-site-muted mt-2', ch.titleEn));
+        if (ch.descZh) wrap.appendChild(el('p', 'font-zh text-sm leading-[2] mt-6 max-w-[28em] text-site-muted', ch.descZh));
+        sec.appendChild(wrap);
+        return sec;
+      }
+
+      // 独立文字页：一整页只放几句话
+      function textPage(text) {
+        var sec = el('section', 'page flex flex-col items-center justify-center px-6 text-center');
+        sec.appendChild(el('p', 'zr font-zh text-lg md:text-xl leading-[2.2] max-w-[26em]', text));
+        return sec;
+      }
+
+      // 照片页：按 layout（显式或自动）选图文模式
+      function photoPage(photo, no, total) {
+        // ① 显式指定优先；② 否则按已有字段语义走自动规则
+        var layout = photo.layout;
+        if (!layout) {
+          if (photo.group)        layout = photo.desc ? 'group-text' : 'group';
+          else if (photo.desc)    { layout = 'panel-' + panelSide; panelSide = (panelSide === 'right' ? 'left' : 'right'); }
+          else if (photo.note)    layout = 'margin';
+          else if (photo.caption) layout = 'caption';
+          else                    layout = 'plain';
+        }
+
+        var sec = el('section', 'page flex flex-col px-6 pt-16 pb-5');
+        var eager = (no === 1);            // 首张不懒加载也不做入场式
+        var stage;
+
+        if (layout === 'panel-right' || layout === 'panel-left') {
+          // ── 左右面板（对开）：图占大头，文字面板在旁，垂直居中 ──
+          stage = el('div', 'flex-1 min-h-0 flex flex-col ' +
+            (layout === 'panel-right' ? 'md:flex-row' : 'md:flex-row-reverse') +
+            ' items-center justify-center gap-6 md:gap-12 max-w-6xl mx-auto w-full');
+          var imgBox = el('div', 'flex-1 min-h-0 flex items-center justify-center w-full' + (eager ? '' : ' zr'));
+          imgBox.appendChild(makeImg(photo.src, photo.alt, '(min-width: 768px) 60vw, 92vw', eager));
+          stage.appendChild(imgBox);
+          var panel = el('div', 'shrink-0 w-full md:w-72 md:pb-6' +
+            (layout === 'panel-left' ? ' md:text-right' : '') + (eager ? '' : ' zr'));
+          if (photo.caption)  panel.appendChild(el('p', (isZh(photo.caption) ? 'font-zh' : 'font-display') + ' text-lg', photo.caption));
+          var dl = [photo.date, photo.location].filter(Boolean).join(' · ');
+          if (dl)             panel.appendChild(el('p', 'font-display text-sm text-site-muted mt-2 tracking-wide', dl));
+          if (photo.desc)     panel.appendChild(el('p', 'font-zh text-sm leading-[2] text-site-muted mt-4', photo.desc));
+          if (photo.meta)     panel.appendChild(el('p', 'font-display text-xs text-site-muted mt-3 tracking-wide', photo.meta));
+          stage.appendChild(panel);
+          sec.appendChild(stage);
+          sec.appendChild(foot(null, no, total));
+
+        } else if (layout === 'margin') {
+          // ── 页边批注：文字缩到页边角落，小小一条 ──
+          stage = el('div', 'flex-1 min-h-0 flex flex-col md:flex-row items-center md:items-end justify-center gap-6 md:gap-10 max-w-6xl mx-auto w-full');
+          var note = el('div', 'order-2 md:order-1 shrink-0 w-full md:w-40 md:pb-10' + (eager ? '' : ' zr'));
+          var noteText = [photo.caption, photo.note || photo.desc].filter(Boolean).join('\n');
+          var noteP = el('p', 'font-zh text-xs leading-[2] text-site-muted');
+          noteP.style.whiteSpace = 'pre-line';   // 换行符生效（JS 动态控制的例外）
+          noteP.textContent = noteText;
+          note.appendChild(noteP);
+          stage.appendChild(note);
+          var imgBox2 = el('div', 'order-1 md:order-2 flex-1 min-h-0 flex items-center justify-center w-full md:self-center' + (eager ? '' : ' zr'));
+          imgBox2.appendChild(makeImg(photo.src, photo.alt, '(min-width: 768px) 70vw, 92vw', eager));
+          stage.appendChild(imgBox2);
+          sec.appendChild(stage);
+          sec.appendChild(foot(null, no, total));
+
+        } else if (layout === 'group' || layout === 'group-text') {
+          // ── 组图：同屏并排（手机上下叠），共用一组文字 ──
+          stage = el('div', 'flex-1 min-h-0 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6' + (eager ? '' : ' zr'));
+          var maxW = photo.group.length > 2 ? 'md:max-w-[30vw]' : 'md:max-w-[44vw]';
+          photo.group.forEach(function (g) {
+            var im = makeImg(g.src, g.alt, '(min-width: 768px) 44vw, 92vw', eager);
+            im.className = 'max-h-[38vh] md:max-h-full w-auto h-auto max-w-full ' + maxW;
+            stage.appendChild(im);
+          });
+          sec.appendChild(stage);
+          if (layout === 'group-text' || photo.caption) {
+            var gt = el('div', 'shrink-0 text-center pt-4' + (eager ? '' : ' zr'));
+            if (photo.caption) gt.appendChild(el('p', (isZh(photo.caption) ? 'font-zh' : 'font-display') + ' text-sm', photo.caption));
+            if (photo.desc)    gt.appendChild(el('p', 'font-zh text-sm text-site-muted mt-1', photo.desc));
+            sec.appendChild(gt);
+          }
+          sec.appendChild(foot(null, no, total));
+
+        } else {
+          // ── 图下注 / 纯照片页：照片独占，页脚放图注和页码 ──
+          stage = el('div', 'flex-1 min-h-0 flex items-center justify-center' + (eager ? '' : ' zr'));
+          var im2 = makeImg(photo.src, photo.alt, '92vw', eager);
+          im2.className = 'max-w-[92vw] max-h-full w-auto h-auto';
+          stage.appendChild(im2);
+          sec.appendChild(stage);
+          sec.appendChild(foot(layout === 'caption' ? photo.caption : null, no, total));
+        }
+        return sec;
+      }
+
+      // 定高页脚：左 = 图注（可空），右 = 页码。高度固定，页码不随照片横竖跳动
+      function foot(caption, no, total) {
+        var f = el('div', 'page-foot h-12 shrink-0 flex items-baseline justify-between gap-6 max-w-4xl mx-auto w-full pt-3');
+        f.appendChild(el('span', (isZh(caption) ? 'font-zh' : 'font-display') + ' text-sm text-site-muted truncate', caption || ''));
+        f.appendChild(el('span', 'font-display text-xs text-site-muted tracking-widest shrink-0', no + ' / ' + total));
+        return f;
+      }
+    }
+
+    // ═══ 翻页浮现 ═══════════════════════════════════════════════
+    // 页面滑到位时，带 .zr 的元素轻轻浮上来；每个元素只浮一次。
+    // 两条路互为备份：IntersectionObserver 是正路；个别内嵌浏览器里 IO
+    // 不可靠，所以滚动事件里再兜底查一遍——谁先发现"到视野了"谁点亮。
+
+    function revealSetup() {
+      var pending = Array.prototype.slice.call(document.querySelectorAll('.zr'));
+
+      function show(t) {
+        t.classList.add('on');
+        var i = pending.indexOf(t);
+        if (i > -1) pending.splice(i, 1);
+        if (!pending.length) window.removeEventListener('scroll', onScroll);
+      }
+
+      if (!('IntersectionObserver' in window)) {
+        // 老浏览器：不做动画，直接全部显示
+        pending.slice().forEach(show);
+        return;
+      }
+
+      var io = new IntersectionObserver(function (hits) {
+        hits.forEach(function (hit) {
+          if (hit.isIntersecting) { io.unobserve(hit.target); show(hit.target); }
+        });
+      }, { threshold: 0.35 });
+      pending.forEach(function (t) { io.observe(t); });
+
+      // 滚动兜底：元素进了视野中段就算到场（与 0.35 阈值同一精神）。
+      // 节流用 setTimeout 而不是 requestAnimationFrame——要兜底的恰恰是
+      // 渲染循环不正常的环境，rAF 在那种环境里同样不跑
+      var ticking = false;
+      function check() {
+        ticking = false;
+        var h = window.innerHeight;
+        if (!h) return;
+        pending.slice().forEach(function (t) {
+          var r = t.getBoundingClientRect();
+          if (r.top < h * 0.8 && r.bottom > h * 0.2) show(t);
+        });
+      }
+      function onScroll() {
+        if (!ticking) { ticking = true; setTimeout(check, 100); }
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+    }
+  </script>
+
+</body>
+</html>
