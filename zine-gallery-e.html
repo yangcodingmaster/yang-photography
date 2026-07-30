@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>图文模式样本册 — 画册实验 E</title>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ⚠️ 实验样张 E · 图文模式样本册（zine-scroll-experiment 分支专用）
+
+       回答作者的问题："文字和照片的位置可以怎么摆？"
+       同一组照片（goodbye-ucl 的真实图文），六种图文关系逐页展示，
+       每页左上角标模式名，滑一遍就能对比圈选。
+
+       壳子沿用 D 版（整屏一页 + 滚动吸附），字体全部是全站既有的三件套：
+       中文 Noto Serif SC / 英文与数字 Cormorant Garamond，无一例外。
+
+       六种模式：
+       一 · 图下注      —— 照片居中，图注在底部定高页脚（D 版现行）
+       二 · 图左文右    —— 展厅面板式，正是现在 Lightbox 的图文关系
+       三 · 图右文左    —— 二的镜像（书籍对开的左右交替）
+       四 · 题记式      —— 一行文字在上，照片在下
+       五 · 页边批注    —— 文字缩到页边，像画册页边的铅笔小注
+       六 · 独立文字页  —— 文字自成一页，照片页绝对纯净
+       手机端：二/三/五自动退化为"照片在上、文字在下"（窄屏没有左右可分）
+       ═══════════════════════════════════════════════════════════ -->
+
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
+  <!-- Tailwind 运行时（本地副本）：与全站一致，别改回在线 CDN -->
+  <script src="assets/vendor/tailwind.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'site-bg':      '#fafaf7',
+            'site-surface': '#f2f2ef',
+            'site-border':  '#e0e0dc',
+            'site-text':    '#111111',
+            'site-muted':   '#8a8a85',
+            'site-accent':  '#111111',
+          },
+          fontFamily: {
+            'display': ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'body':    ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'zh':      ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- 字体（本地副本）：与全站一致 -->
+  <link href="assets/vendor/fonts.css" rel="stylesheet" />
+
+  <style>
+    /* 整屏分页 + 滚动吸附（与 D 版相同的机关） */
+    html { scroll-snap-type: y mandatory; }
+    .page {
+      height: 100vh;
+      height: 100dvh;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+    }
+    .page-foot { padding-bottom: max(0px, env(safe-area-inset-bottom)); }
+  </style>
+</head>
+
+<body class="bg-site-bg text-site-text font-body antialiased">
+
+  <!-- 导航栏：与全站统一 -->
+  <nav class="fixed top-0 w-full z-50 bg-site-bg">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="index.html" class="font-display text-xl tracking-wide text-site-text hover:text-site-muted transition-colors">
+        Yang
+      </a>
+      <ul class="flex gap-8 text-sm text-site-muted">
+        <li><a href="gallery.html" class="text-site-text">Gallery</a></li>
+        <li><a href="archive.html" class="hover:text-site-text transition-colors">Archive</a></li>
+        <li><a href="film.html"    class="hover:text-site-text transition-colors">Film</a></li>
+        <li><a href="about.html"   class="hover:text-site-text transition-colors">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+
+  <!-- ── 封面页 ── -->
+  <section class="page flex flex-col items-center justify-center px-6 text-center">
+    <div class="flex items-center gap-3 justify-center">
+      <span class="inline-block w-2 h-[1.5px] bg-site-text"></span>
+      <span class="font-display text-xs tracking-[0.22em] uppercase text-site-muted">Layout Sampler</span>
+    </div>
+    <h1 class="mt-8">
+      <span class="block font-zh text-3xl md:text-4xl">图文模式样本册</span>
+      <span class="block font-display text-lg md:text-xl mt-3 text-site-muted">Six ways to place words beside photographs</span>
+    </h1>
+    <p class="font-zh text-sm leading-[2] mt-8 max-w-[28em] text-site-muted">
+      同一组照片、同样的真实图文，六种摆法逐页展示。每页左上角标着模式名，往下滑逐一对比。
+    </p>
+  </section>
+
+
+  <!-- ══ 模式一 · 图下注（D 版现行方案） ══ -->
+  <section class="page flex flex-col px-6 pt-20 pb-5">
+    <p class="shrink-0 font-zh text-xs text-site-muted tracking-wide">模式一 · 图下注<span class="font-display"> — caption below</span></p>
+    <div class="flex-1 min-h-0 flex items-center justify-center pt-3">
+      <img src="assets/images-sm/gallery/goodbye-ucl/01.jpeg"
+           srcset="assets/images-sm/gallery/goodbye-ucl/01.jpeg 1280w, assets/images/gallery/goodbye-ucl/01.jpeg 2560w"
+           sizes="92vw" width="1280" height="853" alt="200 周年横幅下的 UCL 主楼"
+           class="max-w-[92vw] max-h-full w-auto h-auto" />
+    </div>
+    <div class="page-foot h-12 shrink-0 flex items-baseline justify-between gap-6 max-w-4xl mx-auto w-full pt-3">
+      <span class="font-zh text-sm text-site-muted truncate">主楼一角</span>
+      <span class="font-display text-xs text-site-muted tracking-widest shrink-0">1 / 16</span>
+    </div>
+  </section>
+
+
+  <!-- ══ 模式二 · 图左文右（展厅面板式：Lightbox 的图文关系原样搬来） ══ -->
+  <section class="page flex flex-col px-6 pt-20 pb-8">
+    <p class="shrink-0 font-zh text-xs text-site-muted tracking-wide">模式二 · 图左文右<span class="font-display"> — panel right</span></p>
+    <div class="flex-1 min-h-0 flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12 pt-3 max-w-6xl mx-auto w-full">
+      <div class="flex-1 min-h-0 flex items-center justify-center w-full">
+        <img src="assets/images-sm/gallery/goodbye-ucl/01.jpeg"
+             sizes="(min-width: 768px) 60vw, 92vw"
+             srcset="assets/images-sm/gallery/goodbye-ucl/01.jpeg 1280w, assets/images/gallery/goodbye-ucl/01.jpeg 2560w"
+             width="1280" height="853" alt="200 周年横幅下的 UCL 主楼"
+             class="max-w-full max-h-full w-auto h-auto" />
+      </div>
+      <!-- 文字面板：字段层级与 series Lightbox 一致（作品名 → 日期地点 → 描述） -->
+      <div class="shrink-0 w-full md:w-72 md:pb-6">
+        <p class="font-zh text-lg">主楼一角</p>
+        <p class="font-display text-sm text-site-muted mt-2 tracking-wide">12/06/2026 · Main Quad</p>
+        <p class="font-zh text-sm leading-[2] text-site-muted mt-4">200 周年限定横幅的主楼。</p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══ 模式三 · 图右文左（对开镜像：像书籍的左文右图跨页） ══ -->
+  <section class="page flex flex-col px-6 pt-20 pb-8">
+    <p class="shrink-0 font-zh text-xs text-site-muted tracking-wide">模式三 · 图右文左<span class="font-display"> — panel left</span></p>
+    <div class="flex-1 min-h-0 flex flex-col-reverse md:flex-row items-center justify-center gap-6 md:gap-12 pt-3 max-w-6xl mx-auto w-full">
+      <div class="shrink-0 w-full md:w-72 md:pb-6 md:text-right">
+        <p class="font-display text-lg">Theatre</p>
+        <p class="font-display text-sm text-site-muted mt-2 tracking-wide">Logan Hall</p>
+      </div>
+      <div class="flex-1 min-h-0 flex items-center justify-center w-full">
+        <img src="assets/images-sm/gallery/goodbye-ucl/16.jpeg"
+             sizes="(min-width: 768px) 60vw, 92vw"
+             srcset="assets/images-sm/gallery/goodbye-ucl/16.jpeg 1280w, assets/images/gallery/goodbye-ucl/16.jpeg 2560w"
+             width="1280" height="854" alt="Logan Hall 剧场" loading="lazy"
+             class="max-w-full max-h-full w-auto h-auto" />
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══ 模式四 · 题记式（一行文字在上，照片在下） ══ -->
+  <section class="page flex flex-col px-6 pt-20 pb-8">
+    <p class="shrink-0 font-zh text-xs text-site-muted tracking-wide">模式四 · 题记式<span class="font-display"> — epigraph above</span></p>
+    <div class="flex-1 min-h-0 flex flex-col items-center justify-center gap-8 pt-3">
+      <p class="shrink-0 font-display text-lg md:text-xl text-center">Logging in</p>
+      <div class="flex-1 min-h-0 flex items-start justify-center w-full">
+        <img src="assets/images-sm/gallery/goodbye-ucl/04.jpeg"
+             sizes="92vw"
+             srcset="assets/images-sm/gallery/goodbye-ucl/04.jpeg 1280w, assets/images/gallery/goodbye-ucl/04.jpeg 2560w"
+             width="1280" height="853" alt="机房显示器上的登录画面" loading="lazy"
+             class="max-w-[92vw] max-h-full w-auto h-auto" />
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══ 模式五 · 页边批注（文字缩到页边，像画册页边的铅笔小注） ══ -->
+  <section class="page flex flex-col px-6 pt-20 pb-8">
+    <p class="shrink-0 font-zh text-xs text-site-muted tracking-wide">模式五 · 页边批注<span class="font-display"> — marginalia</span></p>
+    <div class="flex-1 min-h-0 flex flex-col md:flex-row items-center md:items-end justify-center gap-6 md:gap-10 pt-3 max-w-6xl mx-auto w-full">
+      <!-- 页边小注：贴着页面底边，窄窄一条，与照片刻意不对齐 -->
+      <div class="order-2 md:order-1 shrink-0 w-full md:w-40 md:pb-10">
+        <p class="font-zh text-xs leading-[2] text-site-muted">最熟悉的地方。<br />（页边小注占位——将来这里是你的一句话）</p>
+      </div>
+      <div class="order-1 md:order-2 flex-1 min-h-0 flex items-center justify-center w-full md:self-center">
+        <img src="assets/images-sm/gallery/goodbye-ucl/05.jpeg"
+             sizes="(min-width: 768px) 70vw, 92vw"
+             srcset="assets/images-sm/gallery/goodbye-ucl/05.jpeg 1280w, assets/images/gallery/goodbye-ucl/05.jpeg 2560w"
+             width="1280" height="853" alt="UCL 理学图书馆门口" loading="lazy"
+             class="max-w-full max-h-full w-auto h-auto" />
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══ 模式六 · 独立文字页（文字自成一页；下一页照片绝对纯净） ══ -->
+  <section class="page relative flex flex-col items-center justify-center px-6 text-center">
+    <p class="absolute top-20 left-6 font-zh text-xs text-site-muted tracking-wide">模式六 · 独立文字页<span class="font-display"> — text page + pure photo page</span></p>
+    <p class="font-zh text-lg md:text-xl leading-[2.2] max-w-[26em]">
+      尽管 UCL 我已经熟悉到没什么可拍的了，<br class="hidden md:block" />可是还是拍了许多张主楼的照片。
+    </p>
+  </section>
+  <section class="page flex flex-col px-6 pt-20 pb-5">
+    <div class="flex-1 min-h-0 flex items-center justify-center">
+      <img src="assets/images-sm/gallery/goodbye-ucl/02.jpeg"
+           sizes="92vw"
+           srcset="assets/images-sm/gallery/goodbye-ucl/02.jpeg 1280w, assets/images/gallery/goodbye-ucl/02.jpeg 2560w"
+           width="1280" height="853" alt="UCL North Wing" loading="lazy"
+           class="max-w-[92vw] max-h-full w-auto h-auto" />
+    </div>
+    <div class="page-foot h-12 shrink-0 flex items-baseline justify-end max-w-4xl mx-auto w-full pt-3">
+      <span class="font-display text-xs text-site-muted tracking-widest">2 / 16</span>
+    </div>
+  </section>
+
+
+  <!-- ── 收尾页 ── -->
+  <section class="page flex flex-col items-center justify-center px-6 text-center">
+    <div class="h-px w-20 bg-site-border mb-10"></div>
+    <p class="font-zh text-sm text-site-muted leading-[2] max-w-[26em]">
+      六种模式可以只选一种贯穿全站，<br />也可以按照片有没有文字自动切换（有长文用面板、只有一句用图下注）。
+    </p>
+    <p class="font-display text-2xl mt-8">Yang</p>
+    <a href="zine-index.html" class="inline-block font-display text-sm text-site-muted hover:text-site-text transition-colors mt-10">&rarr; Back to Sampler Index</a>
+  </section>
+
+</body>
+</html>
