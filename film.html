@@ -829,23 +829,30 @@
     var activeSlot   = null;   // 柜子里被翻开的那个筒（收回时还原）
     var activeRow    = null;   // 它所在的排
 
-    // 翻开一卷：其余筒淡出收拢、别的排整排淡出，然后淡入阅读视图
+    // 翻开一卷：其余筒淡出收拢、别的排整排淡出，动作走完就进画册页。
+    //
+    // 2026-07-30 起阅读本身交给 zine.html?film=卷ID（画册式：一屏一格，
+    // 照片仍然嵌在片框里——齿孔和片边字是 Film 的身份，跟着搬过去了）。
+    // 柜子的"抽出"动画特意留着，和进入画册连成一个动作；这一卷从此也有了
+    // 自己的网址。本文件下方的页内阅读视图代码保留作回退（已无人调用）。
     function openRoll(roll, slot, rowEl) {
-      currentRoll  = roll;
-      currentIndex = 0;
-      activeSlot   = slot;
-      activeRow    = rowEl;
       clearPreview();
       cabinet.classList.add('opening');
       rowEl.classList.add('has-active');
       slot.classList.add('active');
       setTimeout(function () {
-        swipeControl.reset();   // 清掉上一次遗留的位移/透明度
-        updateReader();
-        reader.classList.add('open');
-        document.body.style.overflow = 'hidden';
+        location.href = 'zine.html?film=' + encodeURIComponent(roll.id);
       }, 420);
     }
+
+    // 从画册页按"返回"回来时，浏览器会原样恢复页面（bfcache），
+    // 于是看到的是"某卷抽出、其余淡出"的中间态——这里把柜子复位
+    window.addEventListener('pageshow', function () {
+      cabinet.classList.remove('opening');
+      cabinet.querySelectorAll('.has-active').forEach(function (r) { r.classList.remove('has-active'); });
+      cabinet.querySelectorAll('.bay.active').forEach(function (s) { s.classList.remove('active'); });
+      clearPreview();
+    });
 
     // 收回这卷：阅读视图淡出，柜子还原
     function closeRoll() {

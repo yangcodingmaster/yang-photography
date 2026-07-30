@@ -22,10 +22,15 @@
   <meta name="twitter:card" content="summary" />
 
   <!-- ═══════════════════════════════════════════════════════════
-       ⭐ 画册式阅读 —— Gallery 系列的正式阅读页（2026-07-30 转正）
+       ⭐ 画册式阅读 —— 全站三个板块共用的阅读页（2026-07-30 转正）
 
-       用法：zine.html?id=系列ID（gallery.html 卡片点进来就是这里；
-       与旧 series.html 同一套 ID，旧页保留作回退、无入口链接）
+       三种入口，同一套排版语言、同一个文件：
+       · zine.html?id=系列ID    → Gallery 一个系列（gallery.html 卡片点进来）
+       · zine.html?year=YYYY    → Archive 一年的散片（archive.html 点开一本书）
+       · zine.html?film=卷ID    → Film 一卷（film.html 点开一个筒；照片嵌在片框里）
+       每一本都有自己的网址——这也是"每卷/每年可以单独分享"的前提。
+       旧的阅读方式（series.html 的 Lightbox、archive/film 页内的阅读视图）
+       保留作回退，已无入口链接。
 
        作者评审后拍板的组合（2026-07-30）：
        · 底座 = 满屏一张式：每页 100dvh + 滚动吸附，任何设备眼前只有一张照片
@@ -73,6 +78,9 @@
             'display': ['"Cormorant Garamond"', 'Georgia', 'serif'],
             'body':    ['"Cormorant Garamond"', 'Georgia', 'serif'],
             'zh':      ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
+            /* 物体表面的印字（Film 片框的片边字）——全站字体例外，
+               与 film.html 同一条规则：真实底片边缘印的就是无衬线 */
+            'shell':   ['"Helvetica Neue"', 'Arial', 'sans-serif'],
           },
         }
       }
@@ -123,6 +131,82 @@
       transition-timing-function: ease, ease-out;
     }
     a:active { transform: scale(0.97); }
+
+    /* ══ Film 片框：照片嵌在底片上 ══════════════════════════════
+       Film 卷（?film=）专用。照片不是"贴在纸上"而是"嵌在胶片里"——
+       135 上下两排齿孔 + 片边字，120 无齿孔、素黑宽边。这是 Film 的身份，
+       从 film.html 的阅读视图移植过来（那边是单例 #film-frame，
+       画册里一屏一格所以改成类选择器）。竖片时齿孔转到左右两侧、
+       片边字横贯顶部——物理底片上竖片是横躺的，完全还原就得歪头看，
+       所以这里拟物让位于可用性（与 film.html 同一权衡）。 */
+    .film-frame {
+      display: grid;
+      grid-template-areas: "pa" "edge" "img" "pb";
+      padding: 8px 18px 10px;
+      max-width: 100%;
+    }
+    .film-frame .perf-a { grid-area: pa; }
+    .film-frame .perf-b { grid-area: pb; }
+    /* width:0 + min-width:100%：齿孔带不参与片框宽度计算（预填的几十颗齿孔
+       会把格子撑到全屏），只被动跟随照片的宽度，多余齿孔靠 overflow 裁掉 */
+    .film-frame .perf {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      flex-shrink: 0;
+      height: 22px;
+      width: 0;
+      min-width: 100%;
+    }
+    .film-frame .hole { flex-shrink: 0; width: 11px; height: 8px; border-radius: 2px; }
+    /* 片边字：型号在左、画格编号在右（135 编号带 A，是真实底片的写法） */
+    .film-frame .edge-band {
+      grid-area: edge;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 2rem;
+      padding: 3px 2px 7px;
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      opacity: 0.55;
+    }
+    .film-frame img {
+      grid-area: img;
+      max-width: 100%;
+      max-height: calc(100dvh - 15rem);   /* 视口减去导航/页脚/片框自身的装饰 */
+      object-fit: contain;
+    }
+    /* 竖片：片边字横贯顶部，齿孔改站左右两侧 */
+    .film-frame.portrait {
+      grid-template-areas: "edge edge edge" "pa img pb";
+      padding: 8px 8px 18px;
+    }
+    .film-frame.portrait .perf {
+      flex-direction: column;
+      width: 22px;
+      min-width: 0;
+      height: 0;
+      min-height: 100%;
+    }
+    .film-frame.portrait .hole { width: 8px; height: 11px; }
+    .film-frame.portrait .edge-band { padding: 3px 14px 7px; }
+    .film-frame.portrait img { max-height: calc(100dvh - 13rem); }
+    /* 120：没有齿孔，片基边缘更宽更素 */
+    .film-frame.f120, .film-frame.f120.portrait {
+      grid-template-areas: "edge" "img";
+      padding: 8px 26px 24px;
+    }
+    .film-frame.f120 .perf { display: none; }
+    /* 手机：片框边距收窄，照片限高放宽 */
+    @media (max-width: 640px) {
+      .film-frame { padding: 6px 10px 8px; }
+      .film-frame.f120, .film-frame.f120.portrait { padding: 6px 14px 16px; }
+      .film-frame img, .film-frame.portrait img { max-height: 62vh; }
+    }
   </style>
 </head>
 
@@ -169,12 +253,18 @@
     // 是否含中文（决定用中文衬线还是 Cormorant）
     function isZh(s) { return /[一-鿿]/.test(s || ''); }
 
-    // 中文数字（版权页用；单系列照片数不会过百）
+    // 中文数字（版权页用；单本画册照片数不会过百）
     function zhNumber(n) {
       var d = ['零','一','二','三','四','五','六','七','八','九'];
       if (n < 10) return d[n];
       var tens = Math.floor(n / 10), ones = n % 10;
       return (tens > 1 ? d[tens] : '') + '十' + (ones ? d[ones] : '');
+    }
+
+    // 年份的中文写法（逐字念）：'2025' → '二〇二五'
+    function zhYear(y) {
+      var d = ['〇','一','二','三','四','五','六','七','八','九'];
+      return String(y).split('').map(function (c) { return d[+c] || c; }).join('');
     }
 
     // 建元素的简写：el('p', 'font-zh text-sm', '文字')
@@ -199,54 +289,159 @@
       return img;
     }
 
-    // ═══ 读取系列 ═══════════════════════════════════════════════
+    // ═══ 三种书：Gallery 系列 / Archive 年册 / Film 一卷 ═════════
+    //
+    // 每个 spec 只负责把自己板块的数据翻译成统一的"封面 + 条目流 + 版权页"；
+    // 下面的排版引擎只认这套统一格式，不关心数据来自哪个板块。
+    // 加新板块 = 加一个 spec 函数，排版代码一行不用动。
 
     var params = new URLSearchParams(location.search);
-    var seriesId = params.get('id') || '';
-    var series = allSeries.filter(function (s) { return s.id === seriesId; })[0];
     var book = document.getElementById('book');
+    var spec = resolveBook();
 
-    if (!series) {
-      // 无效 ID：给一页说明 + 回作品集的路
+    function resolveBook() {
+      if (params.get('year')) return archiveBook(params.get('year'));
+      if (params.get('film')) return filmBook(params.get('film'));
+      return galleryBook(params.get('id') || '');
+    }
+
+    // ── Gallery：一个系列。分章系列每章前面插一页章节扉页 ──
+    function galleryBook(id) {
+      var series = allSeries.filter(function (s) { return s.id === id; })[0];
+      if (!series) return null;
+      var entries = [];
+      if (series.type === 'sectioned') {
+        (allChapters[id] || []).forEach(function (ch, ci) {
+          entries.push({ chapter: ch, index: ci });
+          ch.photos.forEach(function (p) { entries.push(p); });
+        });
+      } else {
+        entries = (allPhotos[id] || []).slice();
+      }
+      return {
+        kind: 'gallery',
+        nav: 'gallery',
+        docTitle: series.titleZh,
+        entries: entries,
+        cover: {
+          titleZh: series.titleZh,
+          titleEn: series.titleEn,
+          meta: (series.year + (series.location ? ' · ' + series.location : '')).trim(),
+          lead: series.descZh,
+        },
+        colophon: function (n) {
+          return {
+            zh: zhNumber(n) + '张照片',
+            en: series.titleEn + (series.year ? ' · ' + series.year.trim() : ''),
+          };
+        },
+        back: { href: 'gallery.html', text: '→ Back to Gallery' },
+      };
+    }
+
+    // ── Archive：一年的散片。数据里只有 src/alt/note，
+    //    note 当图注放页脚——Archive 的定位就是"只放照片"，不上文字面板 ──
+    function archiveBook(year) {
+      var photos = allArchive[year];
+      if (!photos || !photos.length) return null;
+      return {
+        kind: 'archive',
+        nav: 'archive',
+        docTitle: year,
+        entries: photos.map(function (p) {
+          return {
+            src:     p.src,
+            alt:     p.alt,
+            caption: p.note || '',
+            layout:  p.note ? 'caption' : 'plain',
+          };
+        }),
+        cover: {
+          titleEn: year,      // 年份即书名（与书脊上只印年份同一个基因）
+          bigEn:   true,      // 超大号数字当封面
+          meta:    '散片档案 · ' + zhNumber(photos.length) + '张',
+        },
+        colophon: function (n) {
+          return { zh: zhNumber(n) + '张散片 · ' + zhYear(year) + '年', en: 'Archive ' + year };
+        },
+        back: { href: 'archive.html', text: '→ Back to Archive' },
+      };
+    }
+
+    // ── Film：一卷。照片嵌在片框里（135 齿孔 / 120 素黑边）；
+    //    卷级的作品名/解释/参数放封面页，每格只留自己的 note ──
+    function filmBook(id) {
+      var roll = (allFilms || []).filter(function (f) { return f.id === id; })[0];
+      if (!roll) return null;
+      return {
+        kind: 'film',
+        nav: 'film',
+        roll: roll,
+        docTitle: roll.title || roll.stock,
+        entries: (roll.photos || []).slice(),
+        cover: {
+          titleZh: roll.title || '',        // 作者自定义作品名（可空）
+          titleEn: roll.stock,              // 没有作品名时型号自己当主标题
+          meta:    [roll.format, roll.camera, roll.lens, roll.date].filter(Boolean).join(' · '),
+          lead:    roll.desc,
+        },
+        colophon: function (n) {
+          return { zh: zhNumber(n) + '格', en: roll.stock + (roll.date ? ' · ' + roll.date : '') };
+        },
+        back: { href: 'film.html', text: '→ Back to Film' },
+      };
+    }
+
+    // ── 开工：找不到就给一页说明 + 回对应板块的路 ──
+    if (!spec) {
+      var lost = params.get('year') ? ['没有找到这一年', 'archive.html', '→ Back to Archive']
+               : params.get('film') ? ['没有找到这一卷', 'film.html', '→ Back to Film']
+               :                      ['没有找到这个系列', 'gallery.html', '→ Back to Gallery'];
       var err = el('section', 'page flex flex-col items-center justify-center px-6 text-center');
-      err.appendChild(el('p', 'font-zh text-lg', '没有找到这个系列'));
-      var back = el('a', 'font-display text-sm text-site-muted hover:text-site-text transition-colors mt-8', '→ Back to Gallery');
-      back.href = 'gallery.html';
-      err.appendChild(back);
+      err.appendChild(el('p', 'font-zh text-lg', lost[0]));
+      var errBack = el('a', 'font-display text-sm text-site-muted hover:text-site-text transition-colors mt-8', lost[2]);
+      errBack.href = lost[1];
+      err.appendChild(errBack);
       book.appendChild(err);
     } else {
-      document.title = series.titleZh + ' — Yang Photography';
+      document.title = spec.docTitle + ' — Yang Photography';
+      // 导航高亮：当前所在板块那一项用正文色，其余保持灰
+      document.querySelectorAll('nav ul a').forEach(function (a) {
+        a.className = a.getAttribute('href') === spec.nav + '.html'
+          ? 'text-site-text'
+          : 'hover:text-site-text transition-colors';
+      });
       buildBook();
     }
 
     // ═══ 组装整本画册 ═══════════════════════════════════════════
 
     function buildBook() {
-      // 把系列摊平成条目流：分章系列每章前面插一条章节页
-      var entries = [];
-      if (series.type === 'sectioned') {
-        allChapters[seriesId].forEach(function (ch, ci) {
-          entries.push({ chapter: ch, index: ci });
-          ch.photos.forEach(function (p) { entries.push(p); });
-        });
-      } else {
-        entries = allPhotos[seriesId].slice();
-      }
+      var entries = spec.entries;
 
       // 照片总数（组图算一页）：给页码和版权页用
       var totalPhotos = entries.filter(function (e) { return e.src || e.group; }).length;
 
       // ── 封面页 ──
+      var c = spec.cover;
       var cover = el('section', 'page flex flex-col items-center justify-center px-6 text-center');
       var h1 = el('h1');
-      h1.appendChild(el('span', 'block font-zh text-4xl md:text-5xl leading-tight', series.titleZh));
-      h1.appendChild(el('span', 'block font-display text-xl md:text-2xl mt-4 text-site-muted', series.titleEn));
+      if (c.titleZh) {
+        h1.appendChild(el('span', 'block font-zh text-4xl md:text-5xl leading-tight', c.titleZh));
+        if (c.titleEn) h1.appendChild(el('span', 'block font-display text-xl md:text-2xl mt-4 text-site-muted', c.titleEn));
+      } else if (c.titleEn) {
+        // 没有中文标题时英文自己当主标题；Archive 的年份数字再大一号
+        h1.appendChild(el('span', 'block font-display leading-none ' +
+          (c.bigEn ? 'text-8xl md:text-9xl' : 'text-4xl md:text-5xl'), c.titleEn));
+      }
       cover.appendChild(h1);
-      var metaLine = series.year + (series.location ? ' · ' + series.location : '');
-      cover.appendChild(el('p', 'font-display text-sm text-site-muted mt-6 tracking-wide', metaLine.trim()));
+      if (c.meta) {
+        cover.appendChild(el('p', (isZh(c.meta) ? 'font-zh' : 'font-display') +
+          ' text-sm text-site-muted mt-6 tracking-wide', c.meta));
+      }
       cover.appendChild(el('div', 'mt-10 h-px w-20 bg-site-border'));
-      if (series.descZh) {
-        cover.appendChild(el('p', 'font-zh text-sm md:text-base leading-[2] mt-10 max-w-[30em] text-site-muted', series.descZh));
+      if (c.lead) {
+        cover.appendChild(el('p', 'font-zh text-sm md:text-base leading-[2] mt-10 max-w-[30em] text-site-muted', c.lead));
       }
       book.appendChild(cover);
 
@@ -259,17 +454,21 @@
         if (entry.blank)   { book.appendChild(el('section', 'page')); return; }   // 空白页：一整屏纯纸面的喘息
         if (entry.text)    { book.appendChild(textPage(entry.text)); return; }
         photoNo += 1;
-        book.appendChild(photoPage(entry, photoNo, totalPhotos));
+        // Film 的照片嵌在片框里，其余板块共用通用图文模块
+        book.appendChild(spec.kind === 'film'
+          ? filmPhotoPage(entry, photoNo, totalPhotos)
+          : photoPage(entry, photoNo, totalPhotos));
       });
 
       // ── 版权页 ──
+      var colo = spec.colophon(totalPhotos);
       var end = el('section', 'page flex flex-col items-center justify-center px-6 text-center');
       end.appendChild(el('div', 'h-px w-20 bg-site-border mb-10'));
-      end.appendChild(el('p', 'font-zh text-sm text-site-muted', zhNumber(totalPhotos) + '张照片'));
-      end.appendChild(el('p', 'font-display text-sm text-site-muted mt-1', series.titleEn + (series.year ? ' · ' + series.year.trim() : '')));
+      end.appendChild(el('p', 'font-zh text-sm text-site-muted', colo.zh));
+      end.appendChild(el('p', 'font-display text-sm text-site-muted mt-1', colo.en));
       end.appendChild(el('p', 'font-display text-2xl mt-8', 'Yang'));
-      var back = el('a', 'inline-block font-display text-sm text-site-muted hover:text-site-text transition-colors mt-10', '→ Back to Gallery');
-      back.href = 'gallery.html';
+      var back = el('a', 'inline-block font-display text-sm text-site-muted hover:text-site-text transition-colors mt-10', spec.back.text);
+      back.href = spec.back.href;
       end.appendChild(back);
       book.appendChild(end);
 
@@ -384,6 +583,54 @@
           sec.appendChild(foot(layout === 'caption' ? photo.caption : null, no, total));
         }
         return sec;
+      }
+
+      // Film 的照片页：照片嵌在片框里（135 上下齿孔 + 片边字 / 120 素黑宽边）。
+      // 卷级的作品名/解释/参数已经在封面页说过了，这里每格只留自己的 note，
+      // 所以不做左右面板——一格就是一格，和放在灯箱上看底片一样
+      function filmPhotoPage(photo, no, total) {
+        var roll = spec.roll;
+        var is120 = roll.format === '120';
+        var sec = el('section', 'page flex flex-col px-6 pt-16 pb-5');
+        var eager = (no === 1);
+
+        var stage = el('div', 'flex-1 min-h-0 flex items-center justify-center' + (eager ? '' : ' zr'));
+        var frame = el('div', 'film-frame bg-site-text');
+        if (is120) frame.classList.add('f120');
+        // 竖片查宽高表直接判断（不用等图片加载完再翻转齿孔，表里没有就当横片）
+        var dim = ZINE_DIMS[photo.src];
+        if (dim && dim[1] > dim[0]) frame.classList.add('portrait');
+
+        var perfA = el('div', 'perf perf-a');
+        var perfB = el('div', 'perf perf-b');
+        if (!is120) { buildHoles(perfA); buildHoles(perfB); }
+        frame.appendChild(perfA);
+
+        // 片边字（font-shell = 物体表面印字的全站例外）：
+        // 型号在左、画格编号在右；135 编号带 A，是真实底片的写法
+        var band = el('div', 'edge-band font-shell text-site-bg');
+        band.appendChild(el('span', '', roll.label || roll.stock));
+        band.appendChild(el('span', '', no + (is120 ? '' : 'A')));
+        frame.appendChild(band);
+
+        var img = makeImg(photo.src, photo.alt || (roll.stock + ' 第 ' + no + ' 格'),
+                          '(min-width: 768px) 80vw, 92vw', eager);
+        img.className = '';   // 片框里的图由 .film-frame img 管尺寸，不用 Tailwind 那套
+        frame.appendChild(img);
+        frame.appendChild(perfB);
+
+        stage.appendChild(frame);
+        sec.appendChild(stage);
+        sec.appendChild(foot(photo.note || '', no, total));
+        return sec;
+      }
+
+      // 给齿孔带填一排孔：多填一些，靠 overflow:hidden 居中裁掉
+      // （齿孔带宽度是被动跟随照片的，填多少不影响片框尺寸）
+      function buildHoles(band) {
+        for (var i = 0; i < 40; i++) {
+          band.appendChild(el('span', 'hole bg-site-bg'));
+        }
       }
 
       // 定高页脚：左 = 图注（可空），右 = 页码。高度固定，页码不随照片横竖跳动
