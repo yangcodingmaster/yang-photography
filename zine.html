@@ -25,8 +25,13 @@
           只有 caption   → 图下注
           什么都没有     → 纯照片页
        独立文字页：photos 数组里插一条 { text: '……' }，写在哪就出现在哪
+       空白页：插一条 { blank: true }（画册里的喘息页，一整屏纯纸面）
        分章系列：每章自动插一页章节扉页（大数字 + 中英章题）
        组图 { group: [...] }：同屏并排，共用一组文字
+
+       面板方向的全局开关：下方脚本顶部的 PANEL_SIDE 常量（作者可自己改）——
+       'right' 固定在右（当前默认）/ 'left' 固定在左 / 'alternate' 左右交替。
+       个别照片想反着放，用 layout: 'panel-left' 逐张覆盖，构图说了算
        ═══════════════════════════════════════════════════════════ -->
 
   <link rel="icon" href="favicon.ico" sizes="any" />
@@ -110,6 +115,14 @@
   <script src="data.js"></script>
   <script src="zine-dims.js"></script>
   <script>
+    // ═══ 可调开关（作者自己改这里）═══════════════════════════════
+    // 文字面板放哪边（只影响"没写 layout、靠 desc 自动进面板"的照片）：
+    //   'right'     = 固定在右（默认：先看图、目光右移读字，展签惯例）
+    //   'left'      = 固定在左
+    //   'alternate' = 左右交替（对开节奏，一次只见一页时感知较弱，备用）
+    // 个别照片想反着放：在 data.js 里写 layout: 'panel-left' 逐张覆盖
+    var PANEL_SIDE = 'right';
+
     // ═══ 工具函数 ═══════════════════════════════════════════════
 
     // 小图档路径规则（与 fluid.js 的 fluidSmallSrc 相同，本页就地一行）
@@ -201,10 +214,11 @@
 
       // ── 正文页 ──
       var photoNo = 0;        // 照片页计数（页码 n / N）
-      var panelSide = 'right';// 面板左右交替的状态（对开节奏）
+      var panelSide = 'right';// 仅 PANEL_SIDE = 'alternate' 时使用：交替状态
 
       entries.forEach(function (entry) {
         if (entry.chapter) { book.appendChild(chapterPage(entry.chapter, entry.index)); return; }
+        if (entry.blank)   { book.appendChild(el('section', 'page')); return; }   // 空白页：一整屏纯纸面的喘息
         if (entry.text)    { book.appendChild(textPage(entry.text)); return; }
         photoNo += 1;
         book.appendChild(photoPage(entry, photoNo, totalPhotos));
@@ -251,7 +265,15 @@
         var layout = photo.layout;
         if (!layout) {
           if (photo.group)        layout = photo.desc ? 'group-text' : 'group';
-          else if (photo.desc)    { layout = 'panel-' + panelSide; panelSide = (panelSide === 'right' ? 'left' : 'right'); }
+          else if (photo.desc) {
+            // 面板方向听顶部 PANEL_SIDE 开关的；'alternate' 才逐张交替
+            if (PANEL_SIDE === 'alternate') {
+              layout = 'panel-' + panelSide;
+              panelSide = (panelSide === 'right' ? 'left' : 'right');
+            } else {
+              layout = 'panel-' + PANEL_SIDE;
+            }
+          }
           else if (photo.note)    layout = 'margin';
           else if (photo.caption) layout = 'caption';
           else                    layout = 'plain';
