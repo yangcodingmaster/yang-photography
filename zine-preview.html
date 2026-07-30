@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>再见，UCL — 画册式样张（实验）</title>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ⚠️ 实验样张（zine-scroll-experiment 分支专用）
+
+       这是"画册式阅读"的设计实验：把一个系列排成一整页往下滚的
+       照片文章（photo essay），代替现在的 瀑布流 + Lightbox 翻页。
+
+       设计语言 = 本站设计系统 × Kami 的编辑排版骨架：
+       · 颜色字体全部沿用本站（暖白纸面 / Cormorant + Noto Serif SC / 黑色强调）
+       · 从 Kami 借来的是"结构"：眉题短横线 + 大标题 + 发丝线收束、
+         图注贴图的亲近律、章节间的大留白节奏、结尾的版权页（colophon）
+       · 全页零 JS（Tailwind 运行时除外）：滚动交给浏览器，没有手势引擎
+
+       正式化之前不要给其他页面加入口。og 标签也先不写
+       （正式版每个系列一个静态页时再补，微信抓卡片需要写死的标签）。
+       ═══════════════════════════════════════════════════════════ -->
+
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
+  <!-- Tailwind 运行时（本地副本）：与全站一致，别改回在线 CDN -->
+  <script src="assets/vendor/tailwind.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'site-bg':      '#fafaf7',
+            'site-surface': '#f2f2ef',
+            'site-border':  '#e0e0dc',
+            'site-text':    '#111111',
+            'site-muted':   '#8a8a85',
+            'site-accent':  '#111111',
+          },
+          fontFamily: {
+            'display': ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'body':    ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'zh':      ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- 字体（本地副本）：与全站一致 -->
+  <link href="assets/vendor/fonts.css" rel="stylesheet" />
+</head>
+
+<body class="bg-site-bg text-site-text font-body antialiased">
+
+  <!-- 导航栏：与全站统一 -->
+  <nav class="fixed top-0 w-full z-50 bg-site-bg">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="index.html" class="font-display text-xl tracking-wide text-site-text hover:text-site-muted transition-colors">
+        Yang
+      </a>
+      <ul class="flex gap-8 text-sm text-site-muted">
+        <li><a href="gallery.html" class="text-site-text">Gallery</a></li>
+        <li><a href="archive.html" class="hover:text-site-text transition-colors">Archive</a></li>
+        <li><a href="film.html"    class="hover:text-site-text transition-colors">Film</a></li>
+        <li><a href="about.html"   class="hover:text-site-text transition-colors">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="h-16"></div>
+
+
+  <!-- ── 封面区（借 Kami 的文档开篇骨架：眉题短横线 → 大标题 → 元信息 → 发丝线 → 导语） ── -->
+  <header class="max-w-3xl mx-auto px-6 pt-20 md:pt-28">
+
+    <!-- 眉题：短横线 + 拉宽字距的小字（Kami 的 tick + eyebrow，用本站黑色而非它的墨蓝） -->
+    <div class="flex items-center gap-3">
+      <span class="inline-block w-2 h-[1.5px] bg-site-text"></span>
+      <span class="font-display text-xs tracking-[0.22em] uppercase text-site-muted">Series 04 · A Photo Essay</span>
+    </div>
+
+    <!-- 大标题：中文为主、英文随行（衬线承担层级，不加粗黑体） -->
+    <h1 class="mt-8">
+      <span class="block font-zh text-4xl md:text-5xl leading-tight">再见，UCL</span>
+      <span class="block font-display text-2xl md:text-3xl mt-3 text-site-text">Goodbye, UCL</span>
+    </h1>
+
+    <!-- 元信息行：年份 · 地点 -->
+    <p class="font-display text-sm text-site-muted mt-5 tracking-wide">2026 · University College London</p>
+
+    <!-- 发丝线收束开篇（Kami：header 以一条细线合上；本站惯例是左对齐短线，这里取全宽=文章感） -->
+    <div class="mt-10 h-px bg-site-border"></div>
+
+    <!-- 导语：系列简介（data.js 的 descZh），阅读行高放松 -->
+    <p class="font-zh text-base md:text-lg leading-[2] mt-10 max-w-[36em]">
+      这组照片全部拍摄于 2026 年 6 月 12 日，这是我学生证过期的最后一天。我特意来了一趟，把这三年我走过的角角落落重温一遍，尽管 UCL 我已经熟悉到没什么可拍的了，可是还是拍了许多张主楼的照片。
+    </p>
+  </header>
+
+
+  <!-- ── 照片流：大小错落的节奏（大图 / 居中小图 / 出血图 / 双联页），顺序 = data.js 数组顺序 ── -->
+  <main class="mt-24 md:mt-36">
+
+    <!-- 01 · 开篇大图：全文最重要的一张，占据最大版面 -->
+    <figure class="max-w-4xl mx-auto px-6 mb-24 md:mb-40">
+      <img src="assets/images-sm/gallery/goodbye-ucl/01.jpeg"
+           srcset="assets/images-sm/gallery/goodbye-ucl/01.jpeg 1280w, assets/images/gallery/goodbye-ucl/01.jpeg 2560w"
+           sizes="(min-width: 896px) 848px, 100vw"
+           width="1280" height="853" alt="200 周年横幅下的 UCL 主楼" class="w-full h-auto" />
+      <!-- 图注贴着图（亲近律：与图的距离 < 与下一张的距离），中文图注用中文衬线 -->
+      <figcaption class="mt-4">
+        <span class="font-zh text-sm">主楼一角</span>
+        <span class="font-zh text-sm text-site-muted block mt-1">200 周年限定横幅的主楼 · Main Quad · 12/06/2026</span>
+      </figcaption>
+    </figure>
+
+    <!-- 02 · 居中中图：一收一放，别让每张都一样大 -->
+    <figure class="max-w-2xl mx-auto px-6 mb-24 md:mb-40">
+      <img src="assets/images-sm/gallery/goodbye-ucl/02.jpeg"
+           srcset="assets/images-sm/gallery/goodbye-ucl/02.jpeg 1280w, assets/images/gallery/goodbye-ucl/02.jpeg 2560w"
+           sizes="(min-width: 672px) 624px, 100vw"
+           width="1280" height="853" alt="UCL North Wing" class="w-full h-auto" loading="lazy" />
+      <figcaption class="mt-4 font-display text-sm text-site-muted">The North Wing</figcaption>
+    </figure>
+
+    <!-- 03 · 竖片：收窄居中，两侧留足空气（竖片天生适合独占一页） -->
+    <figure class="max-w-md mx-auto px-6 mb-24 md:mb-40">
+      <img src="assets/images-sm/gallery/goodbye-ucl/03.jpeg"
+           srcset="assets/images-sm/gallery/goodbye-ucl/03.jpeg 1280w, assets/images/gallery/goodbye-ucl/03.jpeg 2560w"
+           sizes="(min-width: 448px) 400px, 100vw"
+           width="853" height="1280" alt="" class="w-full h-auto" loading="lazy" />
+    </figure>
+
+    <!-- 04 · 出血图：铺满屏宽，是画册里的"跨页"，一章只舍得用一两次 -->
+    <figure class="mb-24 md:mb-40">
+      <img src="assets/images/gallery/goodbye-ucl/04.jpeg"
+           srcset="assets/images-sm/gallery/goodbye-ucl/04.jpeg 1280w, assets/images/gallery/goodbye-ucl/04.jpeg 2560w"
+           sizes="100vw"
+           width="1280" height="853" alt="" class="w-full h-auto" loading="lazy" />
+      <figcaption class="max-w-4xl mx-auto px-6 mt-4 font-display text-sm text-site-muted">Logging in</figcaption>
+    </figure>
+
+    <!-- 05 + 06 · 双联页：两张互相说话的照片并排（手机上恢复单列） -->
+    <div class="max-w-5xl mx-auto px-6 mb-24 md:mb-40 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-8 items-start">
+      <figure>
+        <img src="assets/images-sm/gallery/goodbye-ucl/05.jpeg"
+             sizes="(min-width: 768px) 44vw, 100vw"
+             srcset="assets/images-sm/gallery/goodbye-ucl/05.jpeg 1280w, assets/images/gallery/goodbye-ucl/05.jpeg 2560w"
+             width="1280" height="853" alt="" class="w-full h-auto" loading="lazy" />
+        <figcaption class="mt-4 font-zh text-sm text-site-muted">最熟悉的地方</figcaption>
+      </figure>
+      <figure class="md:mt-20">
+        <!-- 第二张下沉一段：双联页的两张不必齐头，错落本身就是排版 -->
+        <img src="assets/images-sm/gallery/goodbye-ucl/06.jpeg"
+             sizes="(min-width: 768px) 44vw, 100vw"
+             srcset="assets/images-sm/gallery/goodbye-ucl/06.jpeg 1280w, assets/images/gallery/goodbye-ucl/06.jpeg 2560w"
+             width="1280" height="853" alt="" class="w-full h-auto" loading="lazy" />
+        <figcaption class="mt-4 font-display text-sm text-site-muted">CIB</figcaption>
+      </figure>
+    </div>
+
+    <!-- 07 · 大图 -->
+    <figure class="max-w-4xl mx-auto px-6 mb-24 md:mb-40">
+      <img src="assets/images-sm/gallery/goodbye-ucl/07.jpeg"
+           srcset="assets/images-sm/gallery/goodbye-ucl/07.jpeg 1280w, assets/images/gallery/goodbye-ucl/07.jpeg 2560w"
+           sizes="(min-width: 896px) 848px, 100vw"
+           width="1280" height="853" alt="" class="w-full h-auto" loading="lazy" />
+    </figure>
+
+    <!-- 08 · 居中中图 -->
+    <figure class="max-w-2xl mx-auto px-6 mb-24 md:mb-40">
+      <img src="assets/images-sm/gallery/goodbye-ucl/08.jpeg"
+           srcset="assets/images-sm/gallery/goodbye-ucl/08.jpeg 1280w, assets/images/gallery/goodbye-ucl/08.jpeg 2560w"
+           sizes="(min-width: 672px) 624px, 100vw"
+           width="1280" height="853" alt="" class="w-full h-auto" loading="lazy" />
+      <figcaption class="mt-4 font-display text-sm text-site-muted">IOE</figcaption>
+    </figure>
+
+    <!-- ── 间页：翻到一半让读者停一口气的文字页（占位文案，正式版由作者手写） ── -->
+    <section class="max-w-3xl mx-auto px-6 py-16 md:py-24 mb-24 md:mb-40">
+      <div class="flex items-center gap-3 mb-8">
+        <span class="inline-block w-2 h-[1.5px] bg-site-text"></span>
+        <span class="font-display text-xs tracking-[0.22em] uppercase text-site-muted">Interlude</span>
+      </div>
+      <p class="font-zh text-lg md:text-xl leading-[2] text-site-muted">
+        （间页文字占位——画册翻到一半，可以有一页只放几句话。这里将来写什么、要不要保留，都由你定。）
+      </p>
+    </section>
+
+    <!-- 09 · 出血图：间页之后紧接一张跨页，一静一动 -->
+    <figure class="mb-24 md:mb-40">
+      <img src="assets/images/gallery/goodbye-ucl/09.jpeg"
+           srcset="assets/images-sm/gallery/goodbye-ucl/09.jpeg 1280w, assets/images/gallery/goodbye-ucl/09.jpeg 2560w"
+           sizes="100vw"
+           width="1280" height="853" alt="" class="w-full h-auto" loading="lazy" />
+    </figure>
+
+    <!-- 10 · 居中中图 -->
+    <figure class="max-w-2xl mx-auto px-6 mb-24 md:mb-40">
+      <img src="assets/images-sm/gallery/goodbye-ucl/10.jpeg"
+           srcset="assets/images-sm/gallery/goodbye-ucl/10.jpeg 1280w, assets/images/gallery/goodbye-ucl/10.jpeg 2560w"
+           sizes="(min-width: 672px) 624px, 100vw"
+           width="1280" height="853" alt="" class="w-full h-auto" loading="lazy" />
+    </figure>
+
+    <!-- 11 · 竖片：独占一页 -->
+    <figure class="max-w-md mx-auto px-6 mb-24 md:mb-40">
+      <img src="assets/images-sm/gallery/goodbye-ucl/11.jpeg"
+           srcset="assets/images-sm/gallery/goodbye-ucl/11.jpeg 1280w, assets/images/gallery/goodbye-ucl/11.jpeg 2560w"
+           sizes="(min-width: 448px) 400px, 100vw"
+           width="853" height="1280" alt="" class="w-full h-auto" loading="lazy" />
+    </figure>
+
+    <!-- 12 + 13 · 双联页 -->
+    <div class="max-w-5xl mx-auto px-6 mb-24 md:mb-40 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-8 items-start">
+      <figure class="md:mt-20">
+        <img src="assets/images-sm/gallery/goodbye-ucl/12.jpeg"
+             sizes="(min-width: 768px) 44vw, 100vw"
+             srcset="assets/images-sm/gallery/goodbye-ucl/12.jpeg 1280w, assets/images/gallery/goodbye-ucl/12.jpeg 2560w"
+             width="1280" height="853" alt="" class="w-full h-auto" loading="lazy" />
+      </figure>
+      <figure>
+        <img src="assets/images-sm/gallery/goodbye-ucl/13.jpeg"
+             sizes="(min-width: 768px) 44vw, 100vw"
+             srcset="assets/images-sm/gallery/goodbye-ucl/13.jpeg 1280w, assets/images/gallery/goodbye-ucl/13.jpeg 2560w"
+             width="1280" height="853" alt="" class="w-full h-auto" loading="lazy" />
+      </figure>
+    </div>
+
+    <!-- 14 · 大图 -->
+    <figure class="max-w-4xl mx-auto px-6 mb-24 md:mb-40">
+      <img src="assets/images-sm/gallery/goodbye-ucl/14.jpeg"
+           srcset="assets/images-sm/gallery/goodbye-ucl/14.jpeg 1280w, assets/images/gallery/goodbye-ucl/14.jpeg 2560w"
+           sizes="(min-width: 896px) 848px, 100vw"
+           width="1280" height="853" alt="" class="w-full h-auto" loading="lazy" />
+    </figure>
+
+    <!-- 15 · 竖片：收得更小，靠近结尾节奏放缓 -->
+    <figure class="max-w-sm mx-auto px-6 mb-24 md:mb-40">
+      <img src="assets/images-sm/gallery/goodbye-ucl/15.jpeg"
+           srcset="assets/images-sm/gallery/goodbye-ucl/15.jpeg 1280w, assets/images/gallery/goodbye-ucl/15.jpeg 2560w"
+           sizes="(min-width: 384px) 336px, 100vw"
+           width="853" height="1280" alt="" class="w-full h-auto" loading="lazy" />
+    </figure>
+
+    <!-- 16 · 收尾图 -->
+    <figure class="max-w-2xl mx-auto px-6 mb-32 md:mb-48">
+      <img src="assets/images-sm/gallery/goodbye-ucl/16.jpeg"
+           srcset="assets/images-sm/gallery/goodbye-ucl/16.jpeg 1280w, assets/images/gallery/goodbye-ucl/16.jpeg 2560w"
+           sizes="(min-width: 672px) 624px, 100vw"
+           width="1280" height="854" alt="Logan Hall 剧场" class="w-full h-auto" loading="lazy" />
+      <figcaption class="mt-4">
+        <span class="font-display text-sm">Theatre</span>
+        <span class="font-display text-sm text-site-muted block mt-1">Logan Hall</span>
+      </figcaption>
+    </figure>
+
+  </main>
+
+
+  <!-- ── 版权页（colophon）：画册的最后一页，代替阅读视图的"游览到此结束"结束卡 ── -->
+  <footer class="max-w-3xl mx-auto px-6 pb-28 md:pb-36">
+    <div class="h-px bg-site-border mb-10"></div>
+    <p class="font-zh text-sm text-site-muted">十六张照片 · 二〇二六年六月十二日</p>
+    <p class="font-display text-sm text-site-muted mt-1">16 photographs · one last afternoon at UCL</p>
+    <p class="font-display text-2xl mt-8">Yang</p>
+    <a href="gallery.html" class="inline-block font-display text-sm text-site-muted hover:text-site-text transition-colors mt-10">&rarr; Back to Gallery</a>
+  </footer>
+
+</body>
+</html>
