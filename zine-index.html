@@ -5,12 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>画册目录 · 实验预览</title>
 
+  <!-- ── 分享卡片 + 描述（默认写法：全站每个页面头部都有这一组）──
+       og:title = 卡片标题；og:description = 标题下那行小字（微信手机端约显示
+       15–20 字）；og:image = 左侧小方图。改哪行见《画册维护手册》教程 5 -->
+  <meta name="description" content="画册目录：每个系列都是一本往下滚的画册。" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Yang Photography" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:title" content="画册目录 · 赵洋摄影" />
+  <meta property="og:description" content="画册目录：每个系列都是一本往下滚的画册。" />
+  <meta property="og:url" content="https://yangzhaophoto.com/zine-index.html" />
+  <meta property="og:image" content="https://yangzhaophoto.com/assets/images/share/share-card.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="1200" />
+  <meta name="twitter:card" content="summary" />
+
   <!-- ═══════════════════════════════════════════════════════════
-       ⚠️ 画册实验的预览目录（zine-scroll-experiment 分支专用）
+       画册预览目录（作者自用，未接入正式导航）
 
        自动列出 data.js 里的全部系列，每个链到 zine.html?id=——
-       给作者在 GitHub Pages / 本地逐个体验用。
-       没有接入任何正式导航；画册转正后这页可删（或改造成正式目录）。
+       给作者在 GitHub Pages / 本地逐个体验用；加新系列自动多一行。
+       将来可以改造成正式目录页，或不需要时直接删掉。
        ═══════════════════════════════════════════════════════════ -->
 
   <link rel="icon" href="favicon.ico" sizes="any" />
