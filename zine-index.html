@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>画册式实验 · 评审入口</title>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ⚠️ 评审入口（zine-scroll-experiment 分支专用）
+
+       五个画册式滚动实验的目录页，给作者回来逐个过目用。
+       实验通过后这页可以直接删掉；没接入任何正式页面的导航。
+       ═══════════════════════════════════════════════════════════ -->
+
+  <link rel="icon" href="favicon.ico" sizes="any" />
+
+  <!-- Tailwind 运行时（本地副本）：与全站一致 -->
+  <script src="assets/vendor/tailwind.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'site-bg':      '#fafaf7',
+            'site-surface': '#f2f2ef',
+            'site-border':  '#e0e0dc',
+            'site-text':    '#111111',
+            'site-muted':   '#8a8a85',
+            'site-accent':  '#111111',
+          },
+          fontFamily: {
+            'display': ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'body':    ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'zh':      ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- 字体（本地副本）：与全站一致 -->
+  <link href="assets/vendor/fonts.css" rel="stylesheet" />
+</head>
+
+<body class="bg-site-bg text-site-text font-body antialiased">
+
+  <!-- 页头 -->
+  <header class="max-w-2xl mx-auto px-6 pt-20 md:pt-28">
+    <div class="flex items-center gap-3">
+      <span class="inline-block w-2 h-[1.5px] bg-site-text"></span>
+      <span class="font-display text-xs tracking-[0.22em] uppercase text-site-muted">Experiment · Scroll Reading</span>
+    </div>
+    <h1 class="mt-8">
+      <span class="block font-zh text-3xl md:text-4xl">画册式实验</span>
+      <span class="block font-display text-xl md:text-2xl mt-2 text-site-muted">Five scroll-reading prototypes</span>
+    </h1>
+    <p class="font-zh text-sm leading-[2] text-site-muted mt-6 max-w-[32em]">
+      把"点进去翻页"换成"往下滚动"的五个原型。前三个是同一问题的三种答案（编辑排版要浓还是淡），后两个是 Film 和 Archive 各自的画册形态。每页从头滚到尾就是完整体验，手机电脑都可以看。
+    </p>
+    <div class="mt-10 h-px w-20 bg-site-border"></div>
+  </header>
+
+
+  <!-- 目录：五个原型 -->
+  <main class="max-w-2xl mx-auto px-6 mt-14 mb-32">
+    <ul class="space-y-2">
+
+      <li>
+        <a href="zine-gallery-a.html" class="block py-6 border-b border-site-border hover:bg-site-surface transition-colors px-3 -mx-3">
+          <span class="font-display text-xs tracking-[0.22em] uppercase text-site-muted block">Gallery · A</span>
+          <span class="font-zh text-lg block mt-2">编辑式 —— 再见，UCL</span>
+          <span class="font-zh text-sm text-site-muted block mt-1">Kami 骨架最完整的一版：眉题、大小错落、出血图、双联页、间页、版权页</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="zine-gallery-b.html" class="block py-6 border-b border-site-border hover:bg-site-surface transition-colors px-3 -mx-3">
+          <span class="font-display text-xs tracking-[0.22em] uppercase text-site-muted block">Gallery · B</span>
+          <span class="font-zh text-lg block mt-2">纯净式 —— 再见，UCL（同一系列，供对照）</span>
+          <span class="font-zh text-sm text-site-muted block mt-1">现有网站的沉默感直接搬进滚动：一列到底、每张整幅一屏、没有任何排版花样</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="zine-gallery-c.html" class="block py-6 border-b border-site-border hover:bg-site-surface transition-colors px-3 -mx-3">
+          <span class="font-display text-xs tracking-[0.22em] uppercase text-site-muted block">Gallery · C</span>
+          <span class="font-zh text-lg block mt-2">分章式 —— 照片记忆｜2025</span>
+          <span class="font-zh text-sm text-site-muted block mt-1">最重的系列（四章 52 张）：章节扉页 + 超大章间留白，检验重系列滚起来累不累</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="zine-film.html" class="block py-6 border-b border-site-border hover:bg-site-surface transition-colors px-3 -mx-3">
+          <span class="font-display text-xs tracking-[0.22em] uppercase text-site-muted block">Film</span>
+          <span class="font-zh text-lg block mt-2">垂直胶片条 —— Kodak Portra 400（36 格）</span>
+          <span class="font-zh text-sm text-site-muted block mt-1">滚动 = 抽片：片头舌、齿孔、琥珀色边印、画格编号，整卷像接触印样一样摊开</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="zine-archive.html" class="block py-6 border-b border-site-border hover:bg-site-surface transition-colors px-3 -mx-3">
+          <span class="font-display text-xs tracking-[0.22em] uppercase text-site-muted block">Archive</span>
+          <span class="font-zh text-lg block mt-2">年册 —— 2025（29 张）</span>
+          <span class="font-zh text-sm text-site-muted block mt-1">五个里最素的一个：巨大年份数字作封面，一列到底，右下角小页码</span>
+        </a>
+      </li>
+
+    </ul>
+
+    <p class="font-zh text-xs text-site-muted mt-12 leading-relaxed">
+      实验分支 zine-scroll-experiment 专用 · 未接入任何正式导航 · 评审后可整体删除
+    </p>
+  </main>
+
+</body>
+</html>

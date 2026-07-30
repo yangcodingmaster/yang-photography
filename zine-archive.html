@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2025 — 画册实验 · Archive 年册</title>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ⚠️ 实验样张 · Archive 年册（zine-scroll-experiment 分支专用）
+
+       Archive 板块的画册化实验：一年 = 一本薄薄的年册。
+       Archive 的身份是"只放照片"，所以这页是五个实验里最素的一个：
+       · 封面只有巨大的年份数字（书脊上也只有年份，同一个基因）
+       · 照片一列到底、整张装进一屏，没有眉题、没有间页
+       · 每张右下角一个小页码 n / N（阅读视图页脚的扁平化）
+       · note 一句话页脚：有才显示（当前 2025 年还没填过 note）
+       ═══════════════════════════════════════════════════════════ -->
+
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
+  <!-- Tailwind 运行时（本地副本）：与全站一致，别改回在线 CDN -->
+  <script src="assets/vendor/tailwind.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'site-bg':      '#fafaf7',
+            'site-surface': '#f2f2ef',
+            'site-border':  '#e0e0dc',
+            'site-text':    '#111111',
+            'site-muted':   '#8a8a85',
+            'site-accent':  '#111111',
+          },
+          fontFamily: {
+            'display': ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'body':    ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'zh':      ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- 字体（本地副本）：与全站一致 -->
+  <link href="assets/vendor/fonts.css" rel="stylesheet" />
+</head>
+
+<body class="bg-site-bg text-site-text font-body antialiased">
+
+  <!-- 导航栏：与全站统一 -->
+  <nav class="fixed top-0 w-full z-50 bg-site-bg">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="index.html" class="font-display text-xl tracking-wide text-site-text hover:text-site-muted transition-colors">
+        Yang
+      </a>
+      <ul class="flex gap-8 text-sm text-site-muted">
+        <li><a href="gallery.html" class="hover:text-site-text transition-colors">Gallery</a></li>
+        <li><a href="archive.html" class="text-site-text">Archive</a></li>
+        <li><a href="film.html"    class="hover:text-site-text transition-colors">Film</a></li>
+        <li><a href="about.html"   class="hover:text-site-text transition-colors">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="h-16"></div>
+
+
+  <!-- ── 封面区：年份即书名。巨大的数字 + 一行小字，再无其他 ── -->
+  <header class="max-w-3xl mx-auto px-6 pt-24 md:pt-36">
+    <h1 class="font-display text-8xl md:text-9xl leading-none">2025</h1>
+    <p id="year-meta" class="font-zh text-sm text-site-muted mt-6"></p>
+    <div class="mt-10 h-px w-20 bg-site-border"></div>
+  </header>
+
+
+  <!-- ── 照片流：一列到底，右下角小页码（由下方脚本从 allArchive 渲染） ── -->
+  <main id="photo-flow" class="mt-24 md:mt-36"></main>
+
+
+  <!-- ── 版权页 ── -->
+  <footer class="max-w-3xl mx-auto px-6 pb-28 md:pb-36">
+    <div class="h-px w-20 bg-site-border mb-10"></div>
+    <p id="colophon-line" class="font-zh text-sm text-site-muted"></p>
+    <p class="font-display text-2xl mt-8">Yang</p>
+    <a href="archive.html" class="inline-block font-display text-sm text-site-muted hover:text-site-text transition-colors mt-10">&rarr; Back to Archive</a>
+  </footer>
+
+
+  <script src="data.js"></script>
+  <script src="zine-dims.js"></script>
+  <script>
+    // 小图档路径规则（与 fluid.js 的 fluidSmallSrc 相同，本页就地一行）
+    function smallSrc(src) { return src.replace('assets/images/', 'assets/images-sm/'); }
+
+    var YEAR = '2025';
+    var photos = allArchive[YEAR];
+    var total = photos.length;
+
+    // 中文数字页脚（29 → 二十九）：只处理两位数以内，Archive 单年不会超过这个量级
+    function zhNumber(n) {
+      var d = ['零','一','二','三','四','五','六','七','八','九'];
+      if (n < 10) return d[n];
+      var tens = Math.floor(n / 10), ones = n % 10;
+      return (tens > 1 ? d[tens] : '') + '十' + (ones ? d[ones] : '');
+    }
+    document.getElementById('year-meta').textContent = '散片档案 · ' + zhNumber(total) + '张';
+    document.getElementById('colophon-line').textContent = zhNumber(total) + '张散片 · 二〇二五年';
+
+    // 照片一列到底：数组顺序 = 显示顺序（与书翻页一致，最新在最前）
+    var flow = document.getElementById('photo-flow');
+    photos.forEach(function (photo, i) {
+      var fig = document.createElement('figure');
+      fig.className = 'max-w-2xl mx-auto px-6 mb-24 md:mb-36';
+
+      var img = document.createElement('img');
+      img.src = smallSrc(photo.src);
+      img.srcset = smallSrc(photo.src) + ' 1280w, ' + photo.src + ' 2560w';
+      img.sizes = '(min-width: 672px) 624px, 100vw';
+      img.alt = photo.alt || '';
+      if (i > 0) img.loading = 'lazy';
+      // 宽高占位（同 B 版的写法）：横片吃满列宽，竖片按比例给确定宽度，
+      // 懒加载前后尺寸一致、滚动不跳版
+      var dim = ZINE_DIMS[photo.src];
+      if (dim) {
+        img.width = dim[0];
+        img.height = dim[1];
+        var ratio = dim[0] / dim[1];
+        if (ratio < 1) {
+          img.className = 'block mx-auto h-auto max-w-full';
+          img.style.width = 'min(100%, calc(85vh * ' + ratio.toFixed(4) + '))';
+        } else {
+          img.className = 'block mx-auto w-full h-auto';
+        }
+      } else {
+        img.className = 'block mx-auto w-auto h-auto max-w-full max-h-[85vh]';
+      }
+      fig.appendChild(img);
+
+      // 页脚：左 = note（有才显示），右 = 页码 n / N（与阅读视图页脚同构）
+      var foot = document.createElement('figcaption');
+      foot.className = 'mt-3 flex items-baseline justify-between gap-6';
+      var note = document.createElement('span');
+      note.className = 'font-zh text-sm text-site-muted';
+      note.textContent = photo.note || '';
+      var page = document.createElement('span');
+      page.className = 'font-display text-xs text-site-muted tracking-widest shrink-0';
+      page.textContent = (i + 1) + ' / ' + total;
+      foot.appendChild(note);
+      foot.appendChild(page);
+      fig.appendChild(foot);
+
+      flow.appendChild(fig);
+    });
+  </script>
+
+</body>
+</html>
