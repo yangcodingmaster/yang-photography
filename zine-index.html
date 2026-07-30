@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>画册目录 · 实验预览</title>
+
+  <!-- ── 分享卡片 + 描述（默认写法：全站每个页面头部都有这一组）──
+       og:title = 卡片标题；og:description = 标题下那行小字（微信手机端约显示
+       15–20 字）；og:image = 左侧小方图。改哪行见《画册维护手册》教程 5 -->
+  <meta name="description" content="画册目录：每个系列都是一本往下滚的画册。" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Yang Photography" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:title" content="画册目录 · 赵洋摄影" />
+  <meta property="og:description" content="画册目录：每个系列都是一本往下滚的画册。" />
+  <meta property="og:url" content="https://yangzhaophoto.com/zine-index.html" />
+  <meta property="og:image" content="https://yangzhaophoto.com/assets/images/share/share-card.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="1200" />
+  <meta name="twitter:card" content="summary" />
+
+  <!-- ═══════════════════════════════════════════════════════════
+       画册预览目录（作者自用，未接入正式导航）
+
+       自动列出 data.js 里的全部系列，每个链到 zine.html?id=——
+       给作者在 GitHub Pages / 本地逐个体验用；加新系列自动多一行。
+       将来可以改造成正式目录页，或不需要时直接删掉。
+       ═══════════════════════════════════════════════════════════ -->
+
+  <link rel="icon" href="favicon.ico" sizes="any" />
+
+  <!-- Tailwind 运行时（本地副本）：与全站一致 -->
+  <script src="assets/vendor/tailwind.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'site-bg':      '#fafaf7',
+            'site-surface': '#f2f2ef',
+            'site-border':  '#e0e0dc',
+            'site-text':    '#111111',
+            'site-muted':   '#8a8a85',
+            'site-accent':  '#111111',
+          },
+          fontFamily: {
+            'display': ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'body':    ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            'zh':      ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- 字体（本地副本）：与全站一致 -->
+  <link href="assets/vendor/fonts.css" rel="stylesheet" />
+</head>
+
+<body class="bg-site-bg text-site-text font-body antialiased">
+
+  <!-- 页头 -->
+  <header class="max-w-2xl mx-auto px-6 pt-20 md:pt-28">
+    <div class="flex items-center gap-3">
+      <span class="inline-block w-2 h-[1.5px] bg-site-text"></span>
+      <span class="font-display text-xs tracking-[0.22em] uppercase text-site-muted">Experiment Preview</span>
+    </div>
+    <h1 class="mt-8">
+      <span class="block font-zh text-3xl md:text-4xl">画册目录</span>
+      <span class="block font-display text-xl md:text-2xl mt-2 text-site-muted">Every series, as a scroll-book</span>
+    </h1>
+    <p class="font-zh text-sm leading-[2] text-site-muted mt-6 max-w-[32em]">
+      每个系列点进去就是画册式阅读：一屏一张，往下滑翻页。手机电脑都可以看。
+    </p>
+    <div class="mt-10 h-px w-20 bg-site-border"></div>
+  </header>
+
+  <!-- 目录：由脚本从 data.js 自动生成，加了新系列这里自动多一行 -->
+  <main class="max-w-2xl mx-auto px-6 mt-14 mb-32">
+    <ul id="series-list" class="space-y-2"></ul>
+    <p class="font-zh text-xs text-site-muted mt-12 leading-relaxed">
+      实验预览页 · 未接入正式导航
+    </p>
+  </main>
+
+  <script src="data.js"></script>
+  <script>
+    // 把 allSeries 渲染成目录：标题 + 年份地点 + 张数说明由数据自带
+    var list = document.getElementById('series-list');
+    allSeries.forEach(function (s) {
+      var li = document.createElement('li');
+      var a = document.createElement('a');
+      a.href = 'zine.html?id=' + s.id;
+      a.className = 'block py-6 border-b border-site-border hover:bg-site-surface transition-colors px-3 -mx-3';
+
+      var meta = document.createElement('span');
+      meta.className = 'font-display text-xs tracking-[0.22em] uppercase text-site-muted block';
+      meta.textContent = (s.year + (s.location ? ' · ' + s.location : '')).trim();
+      a.appendChild(meta);
+
+      var zh = document.createElement('span');
+      zh.className = 'font-zh text-lg block mt-2';
+      zh.textContent = s.titleZh;
+      a.appendChild(zh);
+
+      var en = document.createElement('span');
+      en.className = 'font-display text-sm text-site-muted block mt-1';
+      en.textContent = s.titleEn;
+      a.appendChild(en);
+
+      li.appendChild(a);
+      list.appendChild(li);
+    });
+  </script>
+
+</body>
+</html>

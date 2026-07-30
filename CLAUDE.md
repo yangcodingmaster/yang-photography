@@ -27,7 +27,7 @@
 |------|------|------|
 | `index.html` 首页 | ✅ 完成 | 明信片式：暖白纸面 + 居中单张照片轮播（淡入淡出）+ 极简导航 |
 | `gallery.html` 作品集 | ✅ 完成 | 系列网格，封面图 + 标题 + 年份地点 |
-| `series.html` 系列详情 | ✅ 完成 | 瀑布流网格 + 展览级 Lightbox + 分章支持 + 组图支持 |
+| `series.html` 系列详情 | ⏸ 已退役 | 瀑布流网格 + Lightbox 的旧阅读页；2026-07-30 被 zine.html 取代，保留作回退、无入口链接 |
 | `archive.html` Archive | ✅ 完成 | 书架式：每年一本书（书脊宽度=照片数），翻开逐页阅读（`book-style` 分支重构） |
 | `about.html` 关于页 | ✅ 完成 | 结构完成，文案为占位内容待替换 |
 | `film.html` Film | ✅ 完成 | 胶卷柜式：每卷一个筒（135/120 两种剪影），抽片头预览 + 片框阅读视图（与 series 同构的图文面板）；已录入 7 卷真实胶卷 |
@@ -43,6 +43,7 @@
 | `add-gallery-series` skill | ✅ 完成 | 固化"加 Gallery 系列"工作流，见下方"配套 skill" |
 | 交互升级（fluid.js） | ✅ 完成 | Apple 流体交互：1:1 跟手拖拽、橡皮筋边界、方向感换图、按压态、滚动浮现、reduced-motion（`interaction-design` 分支开发） |
 | 手机加载提速 | ✅ 上线 | 小图档（594MB→114MB）+ srcset + 相邻预加载 + 在路上压暗（`photo-nav-fix` 分支）；瓶颈=服务器 400KB/s 出口，根治靠备案后上 CDN |
+| 画册式阅读（Gallery） | ✅ 已转正 | 点开系列 = `zine.html?id=` 画册（gallery.html 卡片已切换，2026-07-30 作者拍板）；旧 series.html 保留作回退、无入口。详见"画册式阅读"一节，作者手册见 `画册维护手册.md` |
 | 填写真实文案 | ⬜ 进行中 | 各系列 descZh/descEn、照片 caption/desc、关于页（作者逐张手填） |
 
 ### Gallery 系列清单（按 gallery 页展示顺序）
@@ -66,11 +67,16 @@
 我的展览/
 │
 ├── index.html              # 首页：明信片式 + 居中单张照片轮播
-├── gallery.html            # 作品集：系列列表（每格是一个系列/文件夹）
-├── series.html             # 系列详情页（通用，?id= 参数决定显示哪个系列）
+├── gallery.html            # 作品集：系列列表（每格是一个系列/文件夹），点开 = zine.html 画册
+├── zine.html               # ⭐ 画册式阅读（?id= 参数决定哪个系列；2026-07-30 转正）
+├── zine-index.html         # 画册目录（从 data.js 自动列系列；预览用，未接导航）
+├── zine-dims.js            # 画册用的图片宽高表（make-zine-dims.py 生成，勿手改）
+├── series.html             # 旧系列详情页（已退役作回退，无入口链接；别删）
 ├── archive.html            # Archive：书架式散片档案，每年一本书 + 翻开逐页阅读
 ├── film.html               # Film：胶卷柜式胶卷档案，每卷一个筒 + 抽片头预览 + 片框阅读
 ├── about.html              # 关于页：个人介绍 + 联系方式
+│
+├── 画册维护手册.md          # 给作者的画册教程（加/删照片、加系列、调版式、OG 卡片）
 │
 ├── favicon.ico             # 浏览器标签页图标（16/32/48 三个尺寸打包在一个文件里）
 ├── apple-touch-icon.png    # iOS/安卓"加到主屏"时用的大图标（180×180）
@@ -78,7 +84,7 @@
 │
 ├── data.js                 # ⭐ 唯一的数据文件，所有内容只改这里
 │                           #    包含：allSeries、allPhotos、allChapters、allArchive、allFilms
-├── fluid.js                # 弹簧动画 + 滑动手势引擎（零依赖手写，series / archive / film 三处阅读视图共用）
+├── fluid.js                # 弹簧动画 + 滑动手势引擎（archive / film 阅读视图在用；series.html 退役后仍依赖，别删）
 ├── message.js              # 留言表单的前端（四个页面共用一份，自己注入按钮和浮层）
 │
 ├── api/                    # 服务端（全站唯一需要 PHP 的地方）
@@ -90,6 +96,7 @@
 ├── scripts/                # 维护脚本（不是网站的一部分，不影响访客）
 │   ├── deploy.sh           #    ⭐ 日常部署就这一条：rsync 增量同步到腾讯云
 │   ├── make-small-images.py#    ⭐ 生成手机小图档（增量；加了照片跑一次）
+│   ├── make-zine-dims.py   #    生成画册宽高表 zine-dims.js（加了照片跟着跑一次）
 │   ├── share-card.html     #    分享缩略图的"模具"，浏览器截图用
 │   ├── make-share-card.sh  #    换分享图照片时跑它
 │   ├── set-domain.py       #    换域名时跑它（往 og 标签注入真实域名）
@@ -158,10 +165,15 @@
 - 从 `data.js` 读取 `allSeries`，渲染成 3 列网格
 - 每格显示：封面图、中文标题、英文标题、年份、地点
 - 封面图取法：统一用 `series.cover`（所有系列都显式指定，不再回退第一张）
-- 卡片无悬停放大/遮罩等"网页味"动效，整卡可点即跳 `series.html?id=`
+- 卡片无悬停放大/遮罩等"网页味"动效，整卡可点即跳 `zine.html?id=`（画册式阅读，2026-07-30 转正）
 - 卡片有**极轻的按压态**（按下瞬间 scale 0.99、松开缓出）——这是有意加的即时反馈，不要"修复"掉
 
-### 系列详情页 `series.html`
+### 系列详情页 `series.html`（⚠️ 已退役作回退，无入口链接）
+
+> 2026-07-30 起 Gallery 点开系列走 `zine.html`（画册式阅读，见上面专节）。
+> 本页保留在仓库里作回退：把 gallery.html 里卡片的 href 改回来即恢复。
+> 以下说明描述它退役前的行为，Archive / Film 的阅读视图仍与它同构。
+
 - 读取 URL 中的 `?id=` 参数，从 `data.js` 找到对应系列
 - **瀑布流布局**：CSS columns（3 列），照片保持原始比例
   - **两种系列都按 data.js 数组顺序展示**，不随机
@@ -526,6 +538,46 @@ var allFilms = [
 
 ---
 
+## 画册式阅读（zine-*，Gallery 已转正）
+
+> 2026-07-30 的大改版：点开系列不再是"瀑布流网格 + Lightbox 翻页"两段式，
+> 而是**一本往下滚的画册**——每屏一张照片（100dvh + scroll-snap 吸附），滑一下翻一页。
+> 作者实机评审原型后拍板转正：**gallery.html 卡片现在直接跳 `zine.html?id=`**；
+> 旧 series.html 保留在仓库作回退，但已无任何入口链接。
+> 作者侧的完整教程（加照片/删照片/加系列/调版式）在 **`画册维护手册.md`**，别重复写。
+
+### 文件清单
+
+| 文件 | 说明 |
+|---|---|
+| `zine.html` | ⭐ 通用画册模板，`?id=系列ID`（与 series.html 同一套 ID），八个系列全兼容，分章系列自动插章节扉页 |
+| `zine-dims.js` | 图片宽高表（防加载跳版）。`scripts/make-zine-dims.py` 生成，**勿手改**；加照片后重跑 |
+| `zine-index.html` | 画册目录页（从 data.js 自动列出全部系列）；预览用、未接导航，将来可改造成正式目录或删 |
+
+> 比稿期的七个探索原型（Gallery A–E 五个、Film 垂直胶片条、Archive 年册）已删除、不随网站上线；
+> 全部在 git 历史里（2026-07-30 的提交），Film / Archive 画册化时可翻出来当底稿。
+
+### zine.html 模板要点（改它之前必读）
+
+- **版式两层规则**：照片条目写了 `layout` 听 `layout`（`panel-right / panel-left / margin / caption / plain`）；
+  没写走自动规则——有 `desc`→左右面板、有 `note`→页边批注、只有 `caption`→图下注、全空→纯照片页
+- **插页**：photos 数组里 `{ text: '……' }` = 独立文字页、`{ blank: true }` = 空白页，都不占页码
+- **顶部开关**（脚本最上面，作者自己改）：`PANEL_SIDE`（面板 right/left/alternate，默认 right）、
+  `SETTLE_SCALE`（浮现落定感开关）
+- **翻页浮现**：IntersectionObserver 为主 + 滚动事件兜底（兜底节流用 setTimeout 不用 rAF——
+  要兜底的正是渲染循环异常的环境）；`.zr-late` 让文字比照片晚 100ms 到场；减弱动态时只淡入
+- **不引 fluid.js**：翻页交给浏览器原生滚动 + 吸附，这是有意的架构选择（没有代码的地方没有 bug）；
+  别为了"统一"把手势引擎接进来
+- **对旧体系的改动只有一行**：gallery.html 卡片的 href（series.html → zine.html）。
+  series.html 本体一个字没动、保留作回退——改回那一行 href 即回旧体验，别删它
+  （fluid.js 同理不能删：Archive / Film 页面仍在用）
+
+### 与既有体系的关系
+
+- 数据仍然只有 `data.js` 一份：作者填文案一处生效两套页面；Archive/Film 的画册化有原型但未正式化
+- 加照片的维护链多一步：`make-small-images.py` 之后跑 `make-zine-dims.py`
+- 回退保险：实验全部是新增文件；GitHub 上 revert PR 即回原样；腾讯云只在手动跑 deploy.sh 时更新
+
 ## 分享卡片与国内部署
 
 ### 为什么迁到了国内节点（已完成）
@@ -569,8 +621,9 @@ iMessage 都读**，改一次全平台受益。
 1. `og:image` 和 `og:url` **必须是完整网址**（带 `https://` 和域名）。
    这是全站唯一允许出现绝对路径的地方——微信服务器拿着它去下载图片，相对路径抓不到。
 2. **微信抓取时不执行 JavaScript**。所以卡片内容必须写死在 HTML 里。
-   `series.html?id=xxx` 靠 JS 渲染，因此**做不到每个系列一张自己的封面**，
-   只能用通用文案。想做到就得改成静态多页，不值当。
+   `zine.html?id=xxx`（及退役的 series.html）靠 JS 渲染，因此**做不到每个系列
+   一张自己的封面**，只能用通用文案。想做到就得改成静态多页，见"未来可能的方向"。
+   作者侧的 OG 改法教程在《画册维护手册》教程 5。
 
 ### 分享图怎么改
 
@@ -700,7 +753,10 @@ deploy.sh 和 SSH 都直连 IP，与 CDN 无关，部署流程不变。
 - 所有 JS 写在 HTML 底部的 `<script>` 标签内，或单独 `.js` 文件
 - 每段逻辑必须有中文注释
 
-### series.html 核心模式（修改前必读）
+### series.html 核心模式（修改前必读；页面已退役但此模式仍在用）
+
+> series.html 已退役作回退（见"各页面实际功能说明"），但 Archive / Film 的
+> 阅读视图与它同构，这套模式仍是理解那两页的钥匙。
 
 `series.html` 使用统一的 `renderItems` 数组模式，所有内容类型都经过同一个渲染和 Lightbox 管路：
 
@@ -823,8 +879,11 @@ tailwind.config = {
       Resend 验证发件域名。详见"备案通过后还剩三步"
 
 ### 待作者决定
+- [ ] **Film / Archive 要不要也画册化** —— Gallery 已转正；胶片条 / 年册的原型在
+      git 历史里（2026-07-30 的提交），要做时翻出来当底稿
+- [ ] **series.html 何时正式删除** —— 画册用稳一段时间后再删；删之前它是一行 href 的回退
 - [ ] **GitHub Pages 怎么处理** —— 现在是第二个线上副本且留言表单是坏的，
-      见"两个线上副本"一节。建议关掉
+      见"两个线上副本"一节。建议关掉（⚠️ 画册实验期它临时充当作者的海外预览环境，先留着）
 
 ### 待填文案（只有作者本人能做）
 - [ ] 各系列 `descZh` / `descEn`，照片 `caption` / `date` / `location` / `desc` / `meta`
@@ -853,7 +912,7 @@ tailwind.config = {
       想要的效果：分享某个作品集时，微信卡片显示这个系列自己的封面和标题，
       而不是全站通用的那张。
 
-      为什么现在做不到：`series.html` 一个文件服务 8 个系列，靠 `?id=` 区分。
+      为什么现在做不到：`zine.html` 一个文件服务 8 个系列，靠 `?id=` 区分。
       但查询参数不改变服务器返回的文件，而微信抓取又不执行 JS——它读到的
       永远是同一套标签。**这是架构决定的，加多少 og 标签都没用。**
 
