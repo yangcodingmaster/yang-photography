@@ -43,7 +43,7 @@
 | `add-gallery-series` skill | ✅ 完成 | 固化"加 Gallery 系列"工作流，见下方"配套 skill" |
 | 交互升级（fluid.js） | ✅ 完成 | Apple 流体交互：1:1 跟手拖拽、橡皮筋边界、方向感换图、按压态、滚动浮现、reduced-motion（`interaction-design` 分支开发） |
 | 手机加载提速 | ✅ 上线 | 小图档（594MB→114MB）+ srcset + 相邻预加载 + 在路上压暗（`photo-nav-fix` 分支）；瓶颈=服务器 400KB/s 出口，根治靠备案后上 CDN |
-| 画册式阅读实验 | 🧪 实验中 | `zine.html?id=` 通用模板 + 7 个探索原型（`zine-scroll-experiment` 分支）；详见"画册式阅读实验"一节，作者手册见 `画册维护手册.md` |
+| 画册式阅读实验 | 🧪 实验中 | `zine.html?id=` 通用模板 + `zine-index.html` 目录（`zine-scroll-experiment` 分支）；比稿原型已删（git 历史可查）。详见"画册式阅读实验"一节，作者手册见 `画册维护手册.md` |
 | 填写真实文案 | ⬜ 进行中 | 各系列 descZh/descEn、照片 caption/desc、关于页（作者逐张手填） |
 
 ### Gallery 系列清单（按 gallery 页展示顺序）
@@ -540,8 +540,10 @@ var allFilms = [
 |---|---|
 | `zine.html` | ⭐ 通用画册模板，`?id=系列ID`（与 series.html 同一套 ID），八个系列全兼容，分章系列自动插章节扉页 |
 | `zine-dims.js` | 图片宽高表（防加载跳版）。`scripts/make-zine-dims.py` 生成，**勿手改**；加照片后重跑 |
-| `zine-index.html` | 评审目录页（正式模板 + 原型），转正后可删 |
-| `zine-gallery-a~e.html`、`zine-film.html`、`zine-archive.html` | 探索原型（比稿材料），转正后可整批删，历史在 git |
+| `zine-index.html` | 画册目录页（从 data.js 自动列出全部系列），转正后可删或改造成正式目录 |
+
+> 比稿期的九个探索原型（Gallery A–E、Film 垂直胶片条、Archive 年册）已删除、不随网站上线；
+> 全部在 git 历史里（2026-07-30 的提交），Film / Archive 画册化时可翻出来当底稿。
 
 ### zine.html 模板要点（改它之前必读）
 
@@ -861,8 +863,8 @@ tailwind.config = {
 
 ### 待作者决定
 - [ ] **画册式阅读是否转正** —— 在 GitHub Pages / 本地实机体验 `zine-index.html` 后拍板。
-      转正 = gallery 点击目标切到 `zine.html?id=`（一行改动）+ 删七个探索原型；
-      不转正 = 删全部 zine-* 文件即回原样。另：Film / Archive 的画册化只有原型，转正时再讨论
+      转正 = gallery 点击目标切到 `zine.html?id=`（一行改动）；
+      不转正 = 删全部 zine-* 文件即回原样。另：Film / Archive 的画册化原型在 git 历史里，转正时再讨论
 - [ ] **GitHub Pages 怎么处理** —— 现在是第二个线上副本且留言表单是坏的，
       见"两个线上副本"一节。建议关掉（⚠️ 画册实验期它临时充当作者的海外预览环境，先留着）
 
