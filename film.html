@@ -576,25 +576,25 @@
       }).join('');
     }
 
-    // ══ 手机上每排最多放 2 卷 ══════════════════════════════════════
+    // ══ 分排规则：型号内按宽度装箱（2026-08 改，取代旧的"每排最多 2 卷"）══
     //
-    // 为什么必须限制：一卷"展开"要占的宽度 = 筒宽 + 片头长。
-    // 135 在桌面是 84 + 220 = 304px，而 iPhone 屏幕只有 375px —— 一卷就吃掉 81%。
-    // 结果是只有左缘 ≤71px 的筒才装得下完整片头，一排放 4 卷就注定 3 卷看不全
-    // （实测：第 4 卷的片头有 219px 在屏幕外，点下去几乎什么都看不到）。
+    // 红线：排的语义是"一个型号"，装箱只发生在型号内部——
+    // 卷多了另起一排（还是这个型号的地盘），永远不把不同型号凑进同一排。
     //
-    // 每排 2 卷 + 片头缩到 160 之后：
-    //   第 1 卷 左缘 24  → 24 + 84 + 160 = 268px   ✓
-    //   第 2 卷 左缘 122 → 122 + 84 + 160 = 366px  ✓（余 9px）
-    // 3 卷不行：第 3 卷左缘就到 220px 了，右边只剩 71px。
-    //
-    // 桌面完全不受影响：一排照旧不限卷数、片头照旧 220px。
-    // 120 的片头 108px 本来就放得下，不用缩。
+    // 一排放多少卷不再写死，而是算一条硬约束：
+    //   排里任何一卷抽出片头后（展开宽 = 筒宽 + 片头长，随画幅不同），
+    //   片头的右端必须仍在屏幕内。筒钉在原地、片头只往右伸（本页的物理），
+    //   所以每卷的检查 = 它左边所有筒宽 + 间隙 + 它自己的展开宽 ≤ 视口宽。
+    //   预算按视口算（片头允许伸进右侧留白，到屏幕边缘才裁），与本页一贯算法一致。
+    // 装完再做一步"防孤卷"：某型号尾排只剩 1 卷而前一排有 3 卷以上时，
+    // 匀一卷过去（[3,1] → [2,2]），架子看着不偏沉。
+    // 好处：将来某个型号攒到十几卷，手机和桌面都会自动换排，规则永远不用再调
+    // （旧规则桌面不限卷数，卷多了那一排会直接溢出屏幕，这个坑现在填掉了）。
 
     var NARROW_MAX = 640;   // 与 Tailwind 的 sm 断点一致
+    var CAN_GAP    = 14;    // 筒与筒的间隙，与 CSS 里 .row-cans 的 gap 一致
 
-    function isNarrow()    { return window.innerWidth < NARROW_MAX; }
-    function rollsPerRow() { return isNarrow() ? 2 : Infinity; }
+    function isNarrow() { return window.innerWidth < NARROW_MAX; }
 
     // 片头抽出长度：手机上把 135 从 220 缩到 160，其余照常
     function leaderLen(format, dims) {
@@ -602,15 +602,52 @@
       return 160;
     }
 
-    // 把"每个型号一组"切成"每排最多 N 卷"。
-    // 同型号超出的部分自动另起一排搁板，读起来仍是从左到右、从上到下的时间线。
+    // 一卷的收起宽度 / 展开宽度（展开 = 筒 + 片头，随画幅不同）
+    function bayWidth(roll) {
+      return (FORMAT_DIMS[roll.format] || FORMAT_DIMS['135']).w;
+    }
+    function openWidth(roll) {
+      var dims = FORMAT_DIMS[roll.format] || FORMAT_DIMS['135'];
+      return dims.w + leaderLen(roll.format, dims);
+    }
+
+    // 候选的一排能不能成立：逐卷检查"抽出片头后右端仍在屏幕内"
+    function rowFits(rollList, leftEdge) {
+      var x = leftEdge;
+      for (var i = 0; i < rollList.length; i++) {
+        if (x + openWidth(rollList[i]) > window.innerWidth) return false;
+        x += bayWidth(rollList[i]) + CAN_GAP;
+      }
+      return true;
+    }
+
+    // 把"每个型号一组"装箱成一排排；同型号内仍是从左到右的时间线
     function chunkRows(groups) {
-      var per = rollsPerRow();
+      var leftEdge = cabinet.getBoundingClientRect().left;  // 柜子左缘（已含容器留白）
       var out = [];
       groups.forEach(function (g) {
-        for (var i = 0; i < g.rolls.length; i += per) {
-          out.push({ stock: g.stock, rolls: g.rolls.slice(i, i + per) });
+        var packed = [];                 // 这个型号装出来的几排
+        var row = [];
+        g.rolls.forEach(function (roll) {
+          if (row.length && !rowFits(row.concat([roll]), leftEdge)) {
+            packed.push(row);            // 这一排满了，封箱
+            row = [];
+          }
+          row.push(roll);
+        });
+        if (row.length) packed.push(row);
+
+        // 防孤卷：尾排只剩 1 卷而前一排有 3 卷以上 → 匀一卷过去（时间顺序不变）
+        var n = packed.length;
+        if (n > 1 && packed[n - 1].length === 1 && packed[n - 2].length >= 3) {
+          var moved = packed[n - 2][packed[n - 2].length - 1];
+          if (rowFits([moved].concat(packed[n - 1]), leftEdge)) {
+            packed[n - 2].pop();
+            packed[n - 1].unshift(moved);
+          }
         }
+
+        packed.forEach(function (r) { out.push({ stock: g.stock, rolls: r }); });
       });
       return out;
     }
@@ -732,25 +769,39 @@
       cabinet.appendChild(rowEl);
     }
 
-    // 整个柜子重建一次。跨断点（手机 ↔ 桌面）时每排的卷数和片头长度都变了，
-    // 只能重建，没法靠 CSS 完成——搁板线是每排一条，换行必须真的多出一个 .film-row。
+    // 整个柜子重建一次。分排结果变了只能重建，没法靠 CSS 完成——
+    // 搁板线是每排一条，换行必须真的多出一个 .film-row。
+    var lastLayout = '';         // 上一次的分排结果（比对用，避免无谓重建）
+
+    // 分排结果的"指纹"：断点标记 + 每排的卷 id。
+    // 断点也要进指纹——跨断点时就算分排没变，135 的片头长度（220↔160）也变了，必须重建
+    function layoutSig(packed) {
+      return (isNarrow() ? 'n|' : 'w|') + packed.map(function (r) {
+        return r.rolls.map(function (x) { return x.id; }).join(',');
+      }).join('|');
+    }
+
     function renderCabinet() {
       clearPreview();            // 旧的 DOM 要被丢掉，先清掉指向它的状态
       cabinet.innerHTML = '';
-      chunkRows(rows).forEach(buildRow);
+      var packed = chunkRows(rows);
+      lastLayout = layoutSig(packed);
+      packed.forEach(buildRow);
     }
 
     renderCabinet();
 
-    // 只在真正跨过断点时才重建（普通的尺寸变化、手机地址栏收放都不重建，
-    // 否则筒会反复重新浮现，很吵）。阅读视图开着时不动，等关掉再说。
-    var wasNarrow = isNarrow();
+    // 窗口尺寸变化：只在装箱结果（或断点）真的变了时才重建
+    // （普通的小幅缩放、手机地址栏收放都不重建，否则筒会反复重新浮现，很吵）。
+    // 阅读视图开着时不动，等关掉再说。
+    var resizeTimer = null;
     window.addEventListener('resize', function () {
-      var now = isNarrow();
-      if (now === wasNarrow) return;
-      wasNarrow = now;
-      if (reader.classList.contains('open')) return;
-      renderCabinet();
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () {
+        if (reader.classList.contains('open')) return;
+        if (layoutSig(chunkRows(rows)) === lastLayout) return;
+        renderCabinet();
+      }, 150);
     });
 
     // ══ 触屏两步交互：先抽片头，再点胶片翻开 ══════════════════════
