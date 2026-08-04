@@ -38,6 +38,8 @@ rsync -avz --progress --delete $DRY_RUN \
   --exclude '.git' \
   --exclude '.claude' \
   --exclude 'CLAUDE.md' \
+  --exclude '*维护手册.md' \
+  --exclude '*维护手册.pdf' \
   --exclude 'scripts' \
   --exclude '.gitignore' \
   --exclude '.DS_Store' \
@@ -96,3 +98,12 @@ fi
 # 它们不含密钥，进 git 没问题，但没必要放到公网上让人直接下载 ——
 # README 里写着密钥存在哪、体检接口叫什么、有哪些防护措施。
 # 服务器上只需要 message.php 这一个能执行的文件，文档留在仓库里就够了。
+#
+# ---------- 说明：两份维护手册为什么也排除 ----------
+#
+# 同一个理由。《画册维护手册》《网站维护手册》都是给作者自己看的运维文档，
+# 写着服务器路径、SSH 加固备份位置、宝塔操作细节 —— 不含密钥，
+# 但没必要挂在公网上让人翻。
+# ⚠️ 2026-08-04 发现《画册维护手册.md》此前一直可被公网直接下载
+# （http://IP/画册维护手册.md 返回 200），加这两条 exclude 之后，
+# --delete 会在下一次部署时把服务器上那份自动删掉。
