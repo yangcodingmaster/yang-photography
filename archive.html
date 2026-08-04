@@ -140,10 +140,13 @@
     /* hover 展宽只给有光标的设备；触屏走两步交互（.preview 展开 → 再点封面翻开） */
     @media (hover: hover) { .slot:hover { width: 250px; } }
     .slot.active, .slot.preview { width: 250px; }
-    /* 手机上收窄一点：一排 2 本时，最厚的书脊 70px + 间隙 8px + 展开 240px = 318px，
-       在 327px 的可用宽度里刚好放得下（250px 会差 1px） */
+    /* 手机上收窄一点（240→228，2026-08 配合"按宽度装箱"再收了一档）：
+       375px 手机可用宽 327px，[两条书脊 + 间隙 + 展开 228px] 放得下，
+       书架从三排压回两排。展开时右边的邻居可能被推出屏幕边缘——
+       左对齐 + 只往右推，物理上就是"书被挤到架子边上"，是有意的，别修 */
     @media (max-width: 639px) {
-      .slot.active, .slot.preview { width: 240px; }
+      .slot.active, .slot.preview { width: 228px; }
+      .cover-view { width: 228px; }   /* 封面内容跟着收窄，图和文字保持居中不偏 */
     }
     /* 极轻的按压态（与 gallery 卡片同款）——有意加的即时反馈，不要"修复"掉 */
     .slot:active { transform: scale(0.99); }
@@ -356,30 +359,64 @@
 
     var shelf = document.getElementById('shelf');
 
-    // ══ 手机上每排最多放 2 本 ══════════════════════════════════════
+    // ══ 分排规则：按宽度装箱（2026-08 改，取代旧的"每排最多 2 本"）══
     //
-    // 展开一本书要 240px，手机可用宽度只有 327px。一排放 5 本的话，
-    // 展开任意一本都会让整排到 488–524px，超出 160–200px 被裁掉看不见。
-    // 每排 2 本：最厚的书脊 70 + 间隙 8 + 展开 240 = 318px，放得下。
-    // 桌面屏幕够宽，仍然一排放完，观感不变。
+    // 一排一排地装书，装满了才开新排——满不满不是数几本，而是算一条硬约束：
+    //   展开这一排里任何一本书（书脊变成 240/250px 宽）之后，
+    //   整排的总宽必须仍然放得进屏幕，否则展开的封面会被裁掉看不见。
+    // 好处：手机上 5 本大概率 3+2 两排（旧规则是 2+2+1 三排，孤本难看）；
+    // 桌面一排放完不变；将来年份多了自动溢出到新排，规则永远不用再调。
 
     var NARROW_MAX = 640;   // 与 Tailwind 的 sm 断点一致
+    var ROW_GAP    = 8;     // 书与书的间隙，与 CSS 里 .shelf-row 的 gap 一致
 
-    function isNarrow()    { return window.innerWidth < NARROW_MAX; }
-    function booksPerRow() { return isNarrow() ? 2 : Infinity; }
+    function isNarrow() { return window.innerWidth < NARROW_MAX; }
 
-    // 把年份切成一排排；读起来仍是从左到右、从上到下的时间线
+    // 展开态的宽度，与 CSS 保持一致：手机 228px、桌面 250px
+    function expandedWidth() { return isNarrow() ? 228 : 250; }
+
+    // 书脊宽度：底宽 16px + 每张照片 1.6px（数据即造型，buildBook 也用它）
+    function spineWidth(year) {
+      return Math.round(16 + allArchive[year].length * 1.6);
+    }
+
+    // 把年份装箱成一排排；读起来仍是从左到右、从上到下的时间线
+    //
+    // 约束分两档（和 CSS 的对齐方式一一对应）：
+    // · 手机（左对齐，展宽只往右推）：展开的书 + 它左边的所有书脊必须可见，
+    //   右边的邻居被推出屏幕边缘没关系（书被挤到架子边上，物理说得通）
+    //   → 最坏情况 = 展开这一排最右边那本
+    // · 桌面（居中，展宽向两侧撑）：整排连展开带书脊都要放得下
+    //   → 最坏情况 = 展开这一排最薄那本（其余书脊加起来最宽）
     function chunkYears() {
-      var per = booksPerRow();
-      var out = [];
-      for (var i = 0; i < years.length; i += per) out.push(years.slice(i, i + per));
-      return out;
+      var available = shelf.clientWidth || 9999;   // 书架实际可用宽度
+      var expanded  = expandedWidth();
+      var narrow    = isNarrow();
+      var rows = [], row = [], spineSum = 0, minSpine = Infinity;
+
+      years.forEach(function (year) {
+        var t = spineWidth(year);
+        var gaps = ROW_GAP * row.length;           // 加入这本后的间隙总宽
+        var worstWidth = narrow
+          ? spineSum + gaps + expanded             // 展开新加的这本（最右）
+          : expanded + (spineSum + t - Math.min(minSpine, t)) + gaps;
+
+        if (row.length > 0 && worstWidth > available) {
+          rows.push(row);                          // 这一排满了，封箱
+          row = []; spineSum = 0; minSpine = Infinity;
+        }
+        row.push(year);
+        spineSum += t;
+        minSpine = Math.min(minSpine, t);
+      });
+      if (row.length) rows.push(row);
+      return rows;
     }
 
     function buildBook(year, rowEl) {
       var photos = allArchive[year];
-      // 书脊宽度：底宽 16px + 每张照片 1.6px（数据即造型：一眼看出哪年拍得多）
-      var thickness = Math.round(16 + photos.length * 1.6);
+      // 书脊宽度按 spineWidth 算（分排的装箱算法用的是同一把尺子）
+      var thickness = spineWidth(year);
       var cover = photos.length ? photos[0].src : '';   // 封面图 = 当年数组第一张
 
       var slot = document.createElement('div');
@@ -410,12 +447,16 @@
       rowEl.appendChild(slot);
     }
 
-    // 整个书架重建一次。跨断点（手机 ↔ 桌面）时每排放几本变了，只能重建——
+    // 整个书架重建一次。分排结果变了只能重建——
     // 搁板线是每排一条，换行必须真的多出一个 .shelf-row。
+    var lastLayout = '';         // 上一次的分排结果（比对用，避免无谓重建）
+
     function renderShelf() {
       clearPreview();            // 旧 DOM 要被丢掉，先清掉指向它的状态
       shelf.innerHTML = '';
-      chunkYears().forEach(function (group) {
+      var groups = chunkYears();
+      lastLayout = JSON.stringify(groups);
+      groups.forEach(function (group) {
         var rowEl = document.createElement('div');
         rowEl.className = 'shelf-row border-b border-site-border';
         group.forEach(function (year) { buildBook(year, rowEl); });
@@ -425,14 +466,16 @@
 
     renderShelf();
 
-    // 只在真正跨过断点时才重建（普通尺寸变化、手机地址栏收放都不重建）
-    var wasNarrow = isNarrow();
+    // 窗口尺寸变化：只在装箱结果真的变了时才重建
+    // （普通的小幅缩放、手机地址栏收放都不会触发重建）
+    var resizeTimer = null;
     window.addEventListener('resize', function () {
-      var now = isNarrow();
-      if (now === wasNarrow) return;
-      wasNarrow = now;
-      if (reader.classList.contains('open')) return;
-      renderShelf();
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () {
+        if (reader.classList.contains('open')) return;   // 正在读一本书，别动书架
+        if (JSON.stringify(chunkYears()) === lastLayout) return;
+        renderShelf();
+      }, 150);
     });
 
     // ══ 触屏两步交互：先居中预览，再点封面翻开 ══════════════════
